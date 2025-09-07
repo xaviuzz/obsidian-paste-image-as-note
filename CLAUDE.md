@@ -85,6 +85,47 @@ class Command
 
 # Code Style and Preferences
 
+## File Organization
+MUST follow strict one class per file rule with only inner classes allowed as exceptions.
+- Each file contains exactly one public class
+- Inner classes are permitted within their parent class
+- Extract utility classes to separate files immediately
+
+Example:
+```typescript
+❌ AVOID: Multiple classes in one file
+class ImageFormats { ... }
+export class Command { ... }
+
+✅ USE: Separate files
+// image-formats.ts
+export class ImageFormats { ... }
+
+// command.ts  
+import { ImageFormats } from './image-formats';
+export class Command { ... }
+```
+
+## Code Organization
+Extract complex inline logic into dedicated utility classes for maintainability and reusability.
+- Replace complex conditionals with descriptive method calls
+- Create utility classes for repeated logic patterns
+- Use semantic naming that describes the operation
+
+Example:
+```typescript
+❌ AVOID: Complex inline conditions
+return formats.some(format => 
+  format.includes('image/') || 
+  format.includes('image') ||
+  format === 'public.png' ||
+  format === 'public.jpeg'
+);
+
+✅ USE: Extracted utility method
+return ImageFormats.check(formats);
+```
+
 ## Comments Policy
 NEVER add comments to code. User explicitly forbids all code comments.
 - Remove existing comments when editing files

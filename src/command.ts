@@ -19,7 +19,8 @@ export class Command {
 		if (this.hasClipboardImage()) {
 			const imageBuffer: Buffer = this.getClipboardImage();
 			const filename: string = this.saveImageToVault(imageBuffer);
-			console.log('Image saved to vault:', filename);
+			const noteFilename: string = this.createNoteWithImage(filename);
+			console.log('Created note with image:', noteFilename);
 		} else {
 			console.log('No image in clipboard');
 		}
@@ -45,5 +46,12 @@ export class Command {
 		const arrayBuffer = imageBuffer.buffer.slice(startOffset, endOffset) as ArrayBuffer;
 		this.app.vault.createBinary(filename, arrayBuffer);
 		return filename;
+	}
+
+	private createNoteWithImage(imagePath: string): string {
+		const noteFilename = `Image Note ${Date.now()}.md`;
+		const noteContent = `![](${imagePath})`;
+		this.app.vault.create(noteFilename, noteContent);
+		return noteFilename;
 	}
 }

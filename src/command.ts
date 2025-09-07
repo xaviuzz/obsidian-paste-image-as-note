@@ -29,8 +29,14 @@ export class Command {
 		try {
 			const imageBuffer: Buffer = this.readImage();
 			const filename: string = this.saveImage(imageBuffer);
-			this.createNote(filename);
-			this.notifySuccess();
+			const noteTitle: string = this.createNote(filename);
+			
+			if (this.isNoteBeingEdited()) {
+				this.insertNoteLinkAtCursor(noteTitle);
+				this.notifySuccessWithLink();
+			} else {
+				this.notifySuccess();
+			}
 		} catch (error: unknown) {
 			this.notifyError(error);
 		}
@@ -53,6 +59,10 @@ export class Command {
 	}
 
 	private notifySuccess(): void {
+		this.notificationService.success();
+	}
+
+	private notifySuccessWithLink(): void {
 		this.notificationService.success();
 	}
 
@@ -83,5 +93,17 @@ export class Command {
 		const editor: Editor = activeView.editor;
 		console.log("Active editor found");
 		return editor;
+	}
+
+	insertNoteLinkAtCursor(noteTitle: string): void {
+		const editor: Editor | null = this.getCurrentEditor();
+		if (editor === null) {
+			throw new Error('No active editor available for link insertion');
+		}
+		const cleanTitle: string = noteTitle.replace('.md', '');
+		const embedLink = `![[${cleanTitle}]]`;
+		const cursor = editor.getCursor();
+		editor.replaceRange(embedLink, cursor);
+		console.log("Inserted embed link:", embedLink);
 	}
 }

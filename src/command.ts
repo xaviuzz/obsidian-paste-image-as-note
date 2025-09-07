@@ -1,61 +1,67 @@
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { clipboard } = require('electron');
-import { App, Notice } from 'obsidian';
-import { ImageFormats } from './image-formats';
-
-interface NativeImage {
-	isEmpty(): boolean;
-	toPNG(): Buffer;
-}
-
+import { ClipboardService } from './clipboard-service';
+import { VaultService } from './vault-service';
+import { NotificationService } from './notification-service';
 
 export class Command {
-	private app: App;
+	private clipboardService: ClipboardService;
+	private vaultService: VaultService;
+	private notificationService: NotificationService;
 
-	constructor(app: App) {
-		this.app = app;
+	constructor(clipboardService: ClipboardService, vaultService: VaultService, notificationService: NotificationService) {
+		this.clipboardService = clipboardService;
+		this.vaultService = vaultService;
+		this.notificationService = notificationService;
 	}
+
 	execute(): void {
-		if (this.hasClipboardImage()) {
-			try {
-				const imageBuffer: Buffer = this.getClipboardImage();
-				const filename: string = this.saveImageToVault(imageBuffer);
-				this.createNoteWithImage(filename);
-				new Notice('Created note with pasted image');
-			} catch (error: unknown) {
-				new Notice(`Failed to paste image: ${error instanceof Error ? error.message : 'Unknown error'}`);
-			}
+		if (this.hasNoImage()) {
+			this.notifyNoImage();
+			return;
+		}
+		
+		this.executeImagePaste();
+	}
+
+	private executeImagePaste(): void {
+		try {
+			const imageBuffer: Buffer = this.readImage();
+			const filename: string = this.saveImage(imageBuffer);
+			this.createNote(filename);
+			this.notifySuccess();
+		} catch (error: unknown) {
+			this.notifyError(error);
+		}
+	}
+
+	private hasNoImage(): boolean {
+		return this.clipboardService.hasNoImage();
+	}
+
+	private readImage(): Buffer {
+		return this.clipboardService.readImage();
+	}
+
+	private saveImage(imageBuffer: Buffer): string {
+		return this.vaultService.saveImage(imageBuffer);
+	}
+
+	private createNote(filename: string): string {
+		return this.vaultService.createNote(filename);
+	}
+
+	private notifySuccess(): void {
+		this.notificationService.success();
+	}
+
+	private notifyError(error: unknown): void {
+		if (error instanceof Error) {
+			this.notificationService.error(error);
 		} else {
-			new Notice('No image found in clipboard');
+			this.notificationService.error(new Error('Unknown error'));
 		}
 	}
 
-	private hasClipboardImage(): boolean {
-		const formats: string[] = clipboard.availableFormats();
-		return ImageFormats.check(formats);
-	}
-	
-	private getClipboardImage(): Buffer {
-		const image: NativeImage = clipboard.readImage();
-		if (image.isEmpty()) {
-			throw new Error('Clipboard image is empty');
-		}
-		return image.toPNG();
-	}
-	
-	private saveImageToVault(imageBuffer: Buffer): string {
-		const filename = `pasted-image-${Date.now()}.png`;
-		const startOffset = imageBuffer.byteOffset;
-		const endOffset = imageBuffer.byteOffset + imageBuffer.byteLength;
-		const arrayBuffer = imageBuffer.buffer.slice(startOffset, endOffset) as ArrayBuffer;
-		this.app.vault.createBinary(filename, arrayBuffer);
-		return filename;
-	}
-
-	private createNoteWithImage(imagePath: string): string {
-		const noteFilename = `Image Note ${Date.now()}.md`;
-		const noteContent = `![](${imagePath})`;
-		this.app.vault.create(noteFilename, noteContent);
-		return noteFilename;
+	private notifyNoImage(): void {
+		this.notificationService.noImage();
 	}
 }

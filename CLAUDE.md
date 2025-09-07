@@ -125,6 +125,44 @@ import { ImageFormats } from './image-formats';
 export class Command { ... }
 ```
 
+## Service Composition Architecture
+MUST use service composition pattern to separate behavioral concerns into focused classes.
+- Extract distinct behaviors (clipboard, vault, notifications) into dedicated service classes
+- Use dependency injection in main orchestrator classes
+- Each service owns single responsibility and related methods
+- Services should encapsulate their internal messages and error handling
+
+Example:
+```typescript
+❌ AVOID: Monolithic class with mixed concerns
+export class Command {
+  execute() {
+    if (clipboard.hasImage()) {
+      const buffer = clipboard.readImage();
+      vault.saveImage(buffer);
+      new Notice('Success message');
+    }
+  }
+}
+
+✅ USE: Service composition with dependency injection
+export class Command {
+  constructor(
+    private clipboardService: ClipboardService,
+    private vaultService: VaultService, 
+    private notificationService: NotificationService
+  ) {}
+  
+  execute() {
+    if (this.clipboardService.hasImage()) {
+      const buffer = this.clipboardService.readImage();
+      this.vaultService.saveImage(buffer);
+      this.notificationService.success();
+    }
+  }
+}
+```
+
 ## Code Organization
 Extract complex inline logic into dedicated utility classes for maintainability and reusability.
 - Replace complex conditionals with descriptive method calls
@@ -277,6 +315,77 @@ const arrayBuffer = imageBuffer.buffer.slice(startOffset, endOffset) as ArrayBuf
 this.app.vault.createBinary(filename, arrayBuffer);
 ```
 
+## Control Flow Preferences
+MUST use guard clauses and positive logic for cleaner control flow.
+- Prefer guard clauses with early returns over nested if-else structures
+- Invert predicates to express conditions in positive terms when possible
+- Use explicit if-else statements over ternary operators for complex logic
+
+Example:
+```typescript
+❌ AVOID: Nested if-else structure
+execute(): void {
+  if (!this.hasImage()) {
+    this.notifyError();
+  } else {
+    this.processImage();
+  }
+}
+
+✅ USE: Guard clause with positive logic
+execute(): void {
+  if (this.hasNoImage()) {
+    this.notifyError();
+    return;
+  }
+  
+  this.processImage();
+}
+```
+
+## Private Method Aliases Pattern
+MUST create private method aliases for collaborator functions to build fluent internal APIs.
+- Create private methods that alias service collaborator methods
+- Move error handling and type conversion into alias methods
+- Use aliases to hide service collaboration details from main execution flow
+- Aliases should handle parameter transformation and error processing
+
+Example:
+```typescript
+❌ AVOID: Direct service calls with inline error handling
+execute(): void {
+  try {
+    const buffer = this.clipboardService.readImage();
+    this.vaultService.saveImage(buffer);
+  } catch (error: unknown) {
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    this.notificationService.error(errorObj);
+  }
+}
+
+✅ USE: Private aliases with encapsulated error handling
+execute(): void {
+  try {
+    const buffer = this.readImage();
+    this.saveImage(buffer);
+  } catch (error: unknown) {
+    this.notifyError(error);
+  }
+}
+
+private readImage(): Buffer {
+  return this.clipboardService.readImage();
+}
+
+private notifyError(error: unknown): void {
+  if (error instanceof Error) {
+    this.notificationService.error(error);
+  } else {
+    this.notificationService.error(new Error('Unknown error'));
+  }
+}
+```
+
 ## Comments Policy
 NEVER add comments to code. User explicitly forbids all code comments.
 - Remove existing comments when editing files
@@ -295,3 +404,9 @@ async function pasteImage() {
 async function pasteImage() {
 }
 ```
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

@@ -60,8 +60,9 @@ Automatic paste detection with smart note linking functionality is documented in
 ## Execution Control
 MUST implement changes one atomic step at a time with user approval between steps.
 - Complete one discrete step fully before proceeding
-- Wait for user direction after each step completion
+- Wait for user direction after each step completion, even when following predefined plans
 - Use git to revert cleanly if scope exceeds request
+- Add console logging during implementation steps to verify functionality before proceeding
 
 Example:
 ```
@@ -397,13 +398,31 @@ Example:
 ❌ AVOID:
 // This function handles image pasting
 async function pasteImage() {
-  // Implementation here
-}
-
-✅ USE:
-async function pasteImage() {
 }
 ```
+
+## Obsidian Event Handling Policy
+MUST use proper event interception techniques to avoid conflicts with Obsidian's native behaviors.
+- Use capture phase with `{ capture: true }` option in `registerDomEvent()` to intercept events before Obsidian processes them
+- Call both `preventDefault()` and `stopPropagation()` to completely block default behavior
+- Test for duplicate behaviors when overriding native Obsidian functionality
+
+Example:
+```typescript
+❌ AVOID: Incomplete event blocking that allows native handlers to run
+this.registerDomEvent(document, 'paste', (event: ClipboardEvent) => {
+  event.preventDefault(); // Only prevents default, doesn't stop propagation
+  this.handlePaste();
+});
+
+✅ USE: Complete event interception with capture phase
+this.registerDomEvent(document, 'paste', (event: ClipboardEvent) => {
+  event.preventDefault();
+  event.stopPropagation();
+  this.handlePaste();
+}, { capture: true });
+```
+
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.

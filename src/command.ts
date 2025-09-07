@@ -1,4 +1,4 @@
-import { App, MarkdownView } from 'obsidian';
+import { App, Editor, MarkdownView } from 'obsidian';
 import { ClipboardService } from './clipboard-service';
 import { VaultService } from './vault-service';
 import { NotificationService } from './notification-service';
@@ -72,5 +72,16 @@ export class Command {
 		const isEditing: boolean = activeView !== null && activeView.getMode() === 'source';
 		console.log("Editing context:", isEditing);
 		return isEditing;
+	}
+
+	getCurrentEditor(): Editor | null {
+		const activeView: MarkdownView | null = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (activeView === null || activeView.getMode() !== 'source') {
+			console.log("No active editor available");
+			return null;
+		}
+		const editor: Editor = activeView.editor;
+		console.log("Active editor found");
+		return editor;
 	}
 }

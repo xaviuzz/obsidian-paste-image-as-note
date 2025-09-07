@@ -4,13 +4,17 @@ import { ClipboardService } from './clipboard-service';
 import { VaultService } from './vault-service';
 import { NotificationService } from './notification-service';
 import { EditorService } from './editor-service';
+import { Settings, DEFAULT_SETTINGS } from './settings';
+import { SettingsTab } from './settings-tab';
 
 export default class PasteImagePlugin extends Plugin {
 	private command: Command;
+	settings: Settings;
 
 	async onload() {
+		await this.loadSettings();
 		const clipboardService: ClipboardService = new ClipboardService();
-		const vaultService: VaultService = new VaultService(this.app);
+		const vaultService: VaultService = new VaultService(this.app, this.settings);
 		const notificationService: NotificationService = new NotificationService();
 		const editorService: EditorService = new EditorService(this.app);
 		
@@ -23,6 +27,8 @@ export default class PasteImagePlugin extends Plugin {
 		});
 
 		this.registerDomEvent(document, 'paste', (event: ClipboardEvent) => this.handlePasteEvent(event), { capture: true });
+
+		this.addSettingTab(new SettingsTab(this.app, this));
 	}
 
 	private handlePasteEvent(event: ClipboardEvent): void {
@@ -39,6 +45,14 @@ export default class PasteImagePlugin extends Plugin {
 	}
 
 	onunload() {
+	}
+
+	async loadSettings() {
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+	}
+
+	async saveSettings() {
+		await this.saveData(this.settings);
 	}
 
 }

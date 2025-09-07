@@ -18,5 +18,12 @@ main.js
 # obsidian
 data.json
 
+# test vault artifacts
+test-vault/**/*.md
+test-vault/**/*.png
+test-vault/**/*.jpg
+test-vault/**/*.jpeg
+test-vault/.obsidian/workspace.json
+
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store

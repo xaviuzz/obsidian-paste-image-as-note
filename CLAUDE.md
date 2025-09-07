@@ -126,6 +126,64 @@ return formats.some(format =>
 return ImageFormats.check(formats);
 ```
 
+## TypeScript Typing Requirements
+MUST use comprehensive TypeScript type declarations for ALL variables, parameters, and properties.
+- Add explicit type declarations for every variable, not just function signatures
+- Include types for callback parameters and return types
+- Never rely on type inference for variables when explicit typing improves clarity
+
+Example:
+```typescript
+❌ AVOID: Missing variable type declarations
+const imageBuffer = this.getClipboardImage();
+const formats = clipboard.availableFormats();
+return formats.some((format) => format.includes('image/'));
+
+✅ USE: Comprehensive type declarations
+const imageBuffer: Buffer | null = this.getClipboardImage();
+const formats: string[] = clipboard.availableFormats();
+return formats.some((format: string): boolean => format.includes('image/'));
+```
+
+## Local Interface Pattern
+When external type declarations are unavailable, create minimal local interfaces defining only used methods.
+- Define interfaces with minimal required method signatures
+- Place interfaces at top of file after imports
+- Use descriptive interface names that match the external type concept
+
+Example:
+```typescript
+❌ AVOID: Using any type for external dependencies
+const image: any = clipboard.readImage();
+
+✅ USE: Minimal local interface
+interface NativeImage {
+  isEmpty(): boolean;
+  toPNG(): Buffer;
+}
+const image: NativeImage = clipboard.readImage();
+```
+
+## Obsidian Plugin Context Handling  
+Handle Obsidian plugin context constraints where direct imports may fail.
+- Use require() for Electron modules that can't be directly imported
+- Combine require() with local interface typing for type safety
+- Maintain TypeScript benefits while working within plugin limitations
+
+Example:
+```typescript
+❌ AVOID: Direct imports that fail in Obsidian context
+import { clipboard } from 'electron';
+
+✅ USE: require() with local typing
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { clipboard } = require('electron');
+interface NativeImage {
+  isEmpty(): boolean;
+  toPNG(): Buffer;
+}
+```
+
 ## Comments Policy
 NEVER add comments to code. User explicitly forbids all code comments.
 - Remove existing comments when editing files

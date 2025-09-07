@@ -12,7 +12,7 @@ export default class PasteImagePlugin extends Plugin {
 		const vaultService: VaultService = new VaultService(this.app);
 		const notificationService: NotificationService = new NotificationService();
 		
-		this.command = new Command(clipboardService, vaultService, notificationService);
+		this.command = new Command(this.app, clipboardService, vaultService, notificationService);
 
 		this.addCommand({
 			id: 'paste-image-as-note',
@@ -20,12 +20,15 @@ export default class PasteImagePlugin extends Plugin {
 			callback: () => this.command.execute()
 		});
 
-		this.registerDomEvent(document, 'paste', (event: ClipboardEvent) => this.handlePasteEvent(event));
+		this.registerDomEvent(document, 'paste', (event: ClipboardEvent) => this.handlePasteEvent(event), { capture: true });
 	}
 
 	private handlePasteEvent(event: ClipboardEvent): void {
 		if (this.hasImage()) {
+			const isEditing: boolean = this.command.isNoteBeingEdited();
+			console.log("Paste event - editing state:", isEditing);
 			event.preventDefault();
+			event.stopPropagation();
 			this.command.execute();
 		}
 	}

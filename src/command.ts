@@ -1,13 +1,16 @@
+import { App, MarkdownView } from 'obsidian';
 import { ClipboardService } from './clipboard-service';
 import { VaultService } from './vault-service';
 import { NotificationService } from './notification-service';
 
 export class Command {
+	private app: App;
 	private clipboardService: ClipboardService;
 	private vaultService: VaultService;
 	private notificationService: NotificationService;
 
-	constructor(clipboardService: ClipboardService, vaultService: VaultService, notificationService: NotificationService) {
+	constructor(app: App, clipboardService: ClipboardService, vaultService: VaultService, notificationService: NotificationService) {
+		this.app = app;
 		this.clipboardService = clipboardService;
 		this.vaultService = vaultService;
 		this.notificationService = notificationService;
@@ -60,8 +63,14 @@ export class Command {
 			this.notificationService.error(new Error('Unknown error'));
 		}
 	}
-
+	
 	private notifyNoImage(): void {
 		this.notificationService.noImage();
+	}
+	isNoteBeingEdited(): boolean {
+		const activeView: MarkdownView | null = this.app.workspace.getActiveViewOfType(MarkdownView);
+		const isEditing: boolean = activeView !== null && activeView.getMode() === 'source';
+		console.log("Editing context:", isEditing);
+		return isEditing;
 	}
 }

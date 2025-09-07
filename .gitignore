@@ -24,6 +24,7 @@ test-vault/**/*.png
 test-vault/**/*.jpg
 test-vault/**/*.jpeg
 test-vault/.obsidian/workspace.json
+test-vault/.obsidian/app.json
 
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store

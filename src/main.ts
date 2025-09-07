@@ -3,6 +3,7 @@ import { Command } from './command';
 import { ClipboardService } from './clipboard-service';
 import { VaultService } from './vault-service';
 import { NotificationService } from './notification-service';
+import { EditorService } from './editor-service';
 
 export default class PasteImagePlugin extends Plugin {
 	private command: Command;
@@ -11,8 +12,9 @@ export default class PasteImagePlugin extends Plugin {
 		const clipboardService: ClipboardService = new ClipboardService();
 		const vaultService: VaultService = new VaultService(this.app);
 		const notificationService: NotificationService = new NotificationService();
+		const editorService: EditorService = new EditorService(this.app);
 		
-		this.command = new Command(this.app, clipboardService, vaultService, notificationService);
+		this.command = new Command(clipboardService, vaultService, notificationService, editorService);
 
 		this.addCommand({
 			id: 'paste-image-as-note',
@@ -25,8 +27,6 @@ export default class PasteImagePlugin extends Plugin {
 
 	private handlePasteEvent(event: ClipboardEvent): void {
 		if (this.hasImage()) {
-			const isEditing: boolean = this.command.isNoteBeingEdited();
-			console.log("Paste event - editing state:", isEditing);
 			event.preventDefault();
 			event.stopPropagation();
 			this.command.execute();

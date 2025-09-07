@@ -184,6 +184,61 @@ interface NativeImage {
 }
 ```
 
+## Return Type Policy
+MUST avoid union types and multiple return points - prefer single concrete return types with error throwing.
+- Never use union types like `Buffer | null` or `T | undefined`
+- Exactly one return statement per function
+- Throw errors for failure cases instead of returning null
+- Eliminate early returns and multiple return paths
+
+Example:
+```typescript
+❌ AVOID: Union types and multiple returns
+private getImage(): Buffer | null {
+  try {
+    const image = clipboard.readImage();
+    if (image.isEmpty()) {
+      return null;
+    }
+    return image.toPNG();
+  } catch (error) {
+    return null;
+  }
+}
+
+✅ USE: Single concrete return with error throwing
+private getImage(): Buffer {
+  const image = clipboard.readImage();
+  if (image.isEmpty()) {
+    throw new Error('Clipboard image is empty');
+  }
+  return image.toPNG();
+}
+```
+
+## Error Handling Policy
+MUST eliminate error speculation - let errors propagate naturally instead of catching and guessing.
+- Remove try-catch blocks that speculate about failure reasons
+- Let errors bubble up to appropriate handlers
+- Avoid logging errors at low levels - let callers decide
+- Never return null/undefined to indicate errors
+
+Example:
+```typescript
+❌ AVOID: Error speculation and catching
+try {
+  const result = riskyOperation();
+  return result;
+} catch (error) {
+  console.error('Error occurred:', error);
+  return null;
+}
+
+✅ USE: Natural error propagation
+const result = riskyOperation();
+return result;
+```
+
 ## Comments Policy
 NEVER add comments to code. User explicitly forbids all code comments.
 - Remove existing comments when editing files

@@ -11,12 +11,8 @@ interface NativeImage {
 export class Command {
 	execute(): void {
 		if (this.hasClipboardImage()) {
-			const imageBuffer: Buffer | null = this.getClipboardImage();
-			if (imageBuffer) {
-				console.log('Image read from clipboard, size:', imageBuffer.length, 'bytes');
-			} else {
-				console.log('Failed to read image from clipboard');
-			}
+			const imageBuffer: Buffer = this.getClipboardImage();
+			console.log('Image read from clipboard, size:', imageBuffer.length, 'bytes');
 		} else {
 			console.log('No image in clipboard');
 		}
@@ -27,16 +23,11 @@ export class Command {
 		return ImageFormats.check(formats);
 	}
 	
-	private getClipboardImage(): Buffer | null {
-		try {
-			const image: NativeImage = clipboard.readImage();
-			if (image.isEmpty()) {
-				return null;
-			}
-			return image.toPNG();
-		} catch (error: unknown) {
-			console.error('Error reading clipboard image:', error);
-			return null;
+	private getClipboardImage(): Buffer {
+		const image: NativeImage = clipboard.readImage();
+		if (image.isEmpty()) {
+			throw new Error('Clipboard image is empty');
 		}
+		return image.toPNG();
 	}
 }

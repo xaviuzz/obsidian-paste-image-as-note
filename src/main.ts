@@ -19,6 +19,20 @@ export default class PasteImagePlugin extends Plugin {
 			name: 'Paste image as note',
 			callback: () => this.command.execute()
 		});
+
+		this.registerDomEvent(document, 'paste', (event: ClipboardEvent) => this.handlePasteEvent(event));
+	}
+
+	private handlePasteEvent(event: ClipboardEvent): void {
+		if (this.hasImage()) {
+			event.preventDefault();
+			this.command.execute();
+		}
+	}
+
+	private hasImage(): boolean {
+		const clipboardService: ClipboardService = new ClipboardService();
+		return !clipboardService.hasNoImage();
 	}
 
 	onunload() {

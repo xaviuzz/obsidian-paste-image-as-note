@@ -184,6 +184,59 @@ return formats.some(format =>
 return ImageFormats.check(formats);
 ```
 
+## Command Class Encapsulation
+MUST expose minimal public API with only constructor and execute() methods public.
+- All helper methods should be private to hide implementation details
+- Command classes orchestrate services and should not expose internal operations
+- Follow object-oriented encapsulation principles
+
+Example:
+```typescript
+❌ AVOID: Public helper methods
+export class Command {
+  execute() { ... }
+  isNoteBeingEdited(): boolean { ... } // Should be private
+  insertNoteLinkAtCursor(): void { ... } // Should be private
+}
+
+✅ USE: Proper encapsulation
+export class Command {
+  constructor(...) { ... }
+  execute(): void { ... }
+  
+  private isNoteBeingEdited(): boolean { ... }
+  private insertNoteLinkAtCursor(): void { ... }
+}
+```
+
+## Service Composition Maintenance
+MUST clean up dependencies when refactoring functionality into services.
+- Remove unused dependencies from classes when functionality moves to dedicated services
+- Update main.ts dependency injection when adding new services
+- Maintain clean service composition with proper separation of concerns
+
+Example:
+```typescript
+❌ AVOID: Unused dependencies after refactoring
+export class Command {
+  constructor(
+    private app: App, // Unused after moving to EditorService
+    private editorService: EditorService
+  ) {}
+}
+
+✅ USE: Clean dependencies after refactoring
+export class Command {
+  constructor(
+    private editorService: EditorService
+  ) {}
+}
+
+// Update main.ts accordingly
+const editorService = new EditorService(this.app);
+this.command = new Command(editorService);
+```
+
 ## TypeScript Typing Requirements
 MUST use comprehensive TypeScript type declarations for ALL variables, parameters, and properties.
 - Add explicit type declarations for every variable, not just function signatures
@@ -280,6 +333,7 @@ MUST eliminate error speculation - let errors propagate naturally instead of cat
 - Let errors bubble up to appropriate handlers
 - Avoid logging errors at low levels - let callers decide
 - Never return null/undefined to indicate errors
+- Services should throw errors instead of returning nullable types to eliminate redundant error checking
 
 Example:
 ```typescript
@@ -392,6 +446,7 @@ NEVER add comments to code. User explicitly forbids all code comments.
 - Remove existing comments when editing files
 - Write self-documenting code without commentary
 - Keep code clean and minimal
+- Remove all console.log statements from production code for professional, clean codebase
 
 Example:
 ```typescript

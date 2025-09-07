@@ -1,6 +1,6 @@
 {
 	"name": "paste-image-as-note",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"description": "Paste images from clipboard and create new notes with the image content",
 	"main": "main.js",
 	"scripts": {

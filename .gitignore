@@ -22,3 +22,16 @@ data.json
 
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store
+
+# test vault
+
+test-vault/.obsidian/app.json
+test-vault/.obsidian/appearance.json
+test-vault/.obsidian/community-plugins.json
+test-vault/.obsidian/core-plugins.json
+test-vault/.obsidian/plugins/paste-image-as-note/manifest.json
+test-vault/.obsidian/plugins/paste-image-as-note/styles.css
+test-vault/.obsidian/workspace.json
+test-vault/Assets/
+test-vault/Images/
+test-vault/Untitled.md

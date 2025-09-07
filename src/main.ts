@@ -5,7 +5,7 @@ export default class PasteImagePlugin extends Plugin {
 	private command: Command;
 
 	async onload() {
-		this.command = new Command();
+		this.command = new Command(this.app);
 
 		this.addCommand({
 			id: 'paste-image-as-note',

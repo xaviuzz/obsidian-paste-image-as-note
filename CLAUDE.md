@@ -239,6 +239,25 @@ const result = riskyOperation();
 return result;
 ```
 
+## Code Readability Requirements
+MUST prioritize legibility over compactness when code becomes difficult to read.
+- Introduce explaining variables to break down complex expressions
+- Avoid cleverness in favor of clear, obvious code
+- Choose readability over compact solutions
+- Break complex operations into understandable steps
+
+Example:
+```typescript
+❌ AVOID: Complex one-liner
+this.app.vault.createBinary(filename, imageBuffer.buffer.slice(imageBuffer.byteOffset, imageBuffer.byteOffset + imageBuffer.byteLength) as ArrayBuffer);
+
+✅ USE: Explaining variables for clarity
+const startOffset = imageBuffer.byteOffset;
+const endOffset = imageBuffer.byteOffset + imageBuffer.byteLength;
+const arrayBuffer = imageBuffer.buffer.slice(startOffset, endOffset) as ArrayBuffer;
+this.app.vault.createBinary(filename, arrayBuffer);
+```
+
 ## Comments Policy
 NEVER add comments to code. User explicitly forbids all code comments.
 - Remove existing comments when editing files

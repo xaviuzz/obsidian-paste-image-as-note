@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { clipboard } = require('electron');
-import { App } from 'obsidian';
+import { App, Notice } from 'obsidian';
 import { ImageFormats } from './image-formats';
 
 interface NativeImage {
@@ -17,12 +17,16 @@ export class Command {
 	}
 	execute(): void {
 		if (this.hasClipboardImage()) {
-			const imageBuffer: Buffer = this.getClipboardImage();
-			const filename: string = this.saveImageToVault(imageBuffer);
-			const noteFilename: string = this.createNoteWithImage(filename);
-			console.log('Created note with image:', noteFilename);
+			try {
+				const imageBuffer: Buffer = this.getClipboardImage();
+				const filename: string = this.saveImageToVault(imageBuffer);
+				this.createNoteWithImage(filename);
+				new Notice('Created note with pasted image');
+			} catch (error: unknown) {
+				new Notice(`Failed to paste image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			}
 		} else {
-			console.log('No image in clipboard');
+			new Notice('No image found in clipboard');
 		}
 	}
 

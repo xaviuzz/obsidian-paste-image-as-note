@@ -18,19 +18,7 @@ main.js
 # obsidian
 data.json
 
-# test vault artifacts
-test-vault/Images/*.md
-test-vault/Assets/*.png
-test-vault/Assets/*.jpg
-test-vault/Assets/*.jpeg
-test-vault/Notes/*.md
-test-vault/*.md
-test-vault/*.png
-test-vault/*.jpg
-test-vault/*.jpeg
-test-vault/.obsidian/workspace.json
-test-vault/.obsidian/app.json
-test-vault/.obsidian/plugins
+
 
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store

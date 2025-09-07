@@ -1,0 +1,10 @@
+{
+	"id": "paste-image-as-note",
+	"name": "Paste Image as Note",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Paste images from clipboard and create new notes with the image content",
+	"author": "",
+	"authorUrl": "",
+	"isDesktopOnly": false
+}

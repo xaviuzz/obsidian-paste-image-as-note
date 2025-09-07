@@ -1,7 +1,7 @@
 import { Plugin } from 'obsidian';
 import { Command } from './command';
 
-export default class Plugin extends Plugin {
+export default class PasteImagePlugin extends Plugin {
 	private command: Command;
 
 	async onload() {

@@ -1,9 +1,9 @@
 import { Plugin } from 'obsidian';
 import { Command } from './command';
-import { ClipboardService } from './clipboard-service';
-import { VaultService } from './vault-service';
-import { NotificationService } from './notification-service';
-import { EditorService } from './editor-service';
+import { ClipboardService } from './services/clipboard-service';
+import { VaultService } from './services/vault-service';
+import { NotificationService } from './services/notification-service';
+import { EditorService } from './services/editor-service';
 import { Settings, DEFAULT_SETTINGS } from './settings';
 import { SettingsTab } from './settings-tab';
 

@@ -1,5 +1,5 @@
 import { App } from 'obsidian';
-import { Settings } from './settings';
+import { Settings } from '../settings';
 
 export class VaultService {
 	private app: App;

@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
-import PasteImagePlugin from './main';
+import PasteImagePlugin from '../main';
 
 export class SettingsTab extends PluginSettingTab {
 	plugin: PasteImagePlugin;

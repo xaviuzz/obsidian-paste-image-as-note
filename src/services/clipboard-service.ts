@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { clipboard } = require('electron');
-import { ImageFormats } from '../image-formats';
+import { ImageFormats } from '../utils/image-formats';
 
 interface NativeImage {
 	isEmpty(): boolean;

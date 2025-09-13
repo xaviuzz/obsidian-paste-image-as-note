@@ -5,7 +5,7 @@ import { VaultService } from './services/vault-service';
 import { NotificationService } from './services/notification-service';
 import { EditorService } from './services/editor-service';
 import { Settings, DEFAULT_SETTINGS } from './settings';
-import { SettingsTab } from './settings-tab';
+import { SettingsTab } from './ui/settings-tab';
 
 export default class PasteImagePlugin extends Plugin {
 	private command: Command;

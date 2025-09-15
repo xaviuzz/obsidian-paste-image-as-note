@@ -1,5 +1,5 @@
 import { Plugin } from 'obsidian';
-import { Command } from './command';
+import { Command, CommandDependencies } from './command';
 import { ClipboardService } from './services/clipboard-service';
 import { VaultService } from './services/vault-service';
 import { NotificationService } from './services/notification-service';
@@ -13,12 +13,7 @@ export default class PasteImagePlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-		const clipboardService: ClipboardService = new ClipboardService();
-		const vaultService: VaultService = new VaultService(this.app, this.settings);
-		const notificationService: NotificationService = new NotificationService();
-		const editorService: EditorService = new EditorService(this.app);
-		
-		this.command = new Command(clipboardService, vaultService, notificationService, editorService);
+		this.initializeCommand();
 
 		this.addCommand({
 			id: 'paste-image-as-note',
@@ -31,6 +26,17 @@ export default class PasteImagePlugin extends Plugin {
 		this.addSettingTab(new SettingsTab(this.app, this));
 	}
 
+	private initializeCommand() {
+		const services: CommandDependencies = {
+			clipboardService: new ClipboardService(),
+			vaultService: new VaultService(this.app, this.settings),
+			notificationService: new NotificationService(),
+			editorService: new EditorService(this.app)
+		};
+
+		this.command = new Command(services);
+	}
+
 	private handlePasteEvent(event: ClipboardEvent): void {
 		if (this.hasImage()) {
 			event.preventDefault();
@@ -41,7 +47,7 @@ export default class PasteImagePlugin extends Plugin {
 
 	private hasImage(): boolean {
 		const clipboardService: ClipboardService = new ClipboardService();
-		return !clipboardService.hasNoImage();
+		return clipboardService.hasImage();
 	}
 
 	onunload() {

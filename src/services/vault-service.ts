@@ -5,28 +5,40 @@ export class VaultService {
 	private app: App;
 	private settings: Settings;
 
+	private readonly imagePrefix = 'pasted-image-';
+	private readonly imageExtension = '.png';
+	private readonly notePrefix = 'Image Note ';
+	private readonly noteExtension = '.md';
+	private readonly markdownImagePrefix = '![](';
+	private readonly markdownImageSuffix = ')';
+	private readonly pathSeparator = '/';
+	private readonly parentPath = '../';
+
 	constructor(app: App, settings: Settings) {
 		this.app = app;
 		this.settings = settings;
 	}
 
 	saveImage(imageBuffer: Buffer): string {
-		const filename = `pasted-image-${Date.now()}.png`;
+		const filename = `${this.imagePrefix}${Date.now()}${this.imageExtension}`;
 		const imagePath: string = this.getImagePath(filename);
 		
 		this.ensureFolderExists(this.settings.imageFolder);
-		
+		this.createImage(imageBuffer, imagePath);
+		return imagePath;
+	}
+
+	private createImage(imageBuffer: Buffer, imagePath: string) {
 		const startOffset: number = imageBuffer.byteOffset;
 		const endOffset: number = imageBuffer.byteOffset + imageBuffer.byteLength;
 		const arrayBuffer: ArrayBuffer = imageBuffer.buffer.slice(startOffset, endOffset) as ArrayBuffer;
 		this.app.vault.createBinary(imagePath, arrayBuffer);
-		return imagePath;
 	}
 
 	createNote(imagePath: string): string {
-		const noteFilename = `Image Note ${Date.now()}.md`;
+		const noteFilename = `${this.notePrefix}${Date.now()}${this.noteExtension}`;
 		const notePath: string = this.getNotePath(noteFilename);
-		const noteContent = `![](${this.getRelativeImagePath(imagePath, notePath)})`;
+		const noteContent = `${this.markdownImagePrefix}${this.getRelativeImagePath(imagePath, notePath)}${this.markdownImageSuffix}`;
 		
 		this.ensureFolderExists(this.settings.imageNotesFolder);
 		
@@ -36,14 +48,14 @@ export class VaultService {
 
 	private getImagePath(filename: string): string {
 		if (this.settings.imageFolder) {
-			return `${this.settings.imageFolder}/${filename}`;
+			return `${this.settings.imageFolder}${this.pathSeparator}${filename}`;
 		}
 		return filename;
 	}
 
 	private getNotePath(filename: string): string {
 		if (this.settings.imageNotesFolder) {
-			return `${this.settings.imageNotesFolder}/${filename}`;
+			return `${this.settings.imageNotesFolder}${this.pathSeparator}${filename}`;
 		}
 		return filename;
 	}
@@ -61,15 +73,15 @@ export class VaultService {
 		}
 		
 		if (noteFolder && !imageFolder) {
-			return `../${imagePath}`;
+			return `${this.parentPath}${imagePath}`;
 		}
 		
 		if (noteFolder === imageFolder) {
-			const filename: string = imagePath.split('/').pop() || imagePath;
+			const filename: string = imagePath.split(this.pathSeparator).pop() || imagePath;
 			return filename;
 		}
 		
-		return `../${imagePath}`;
+		return `${this.parentPath}${imagePath}`;
 	}
 
 	private ensureFolderExists(folderPath: string): void {

@@ -8,9 +8,9 @@ interface NativeImage {
 }
 
 export class ClipboardService {
-	hasNoImage(): boolean {
+	hasImage(): boolean {
 		const formats: string[] = clipboard.availableFormats();
-		return !ImageFormats.check(formats);
+		return ImageFormats.check(formats);
 	}
 
 	readImage(): Buffer {

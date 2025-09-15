@@ -3,21 +3,32 @@ import { VaultService } from './services/vault-service';
 import { NotificationService } from './services/notification-service';
 import { EditorService } from './services/editor-service';
 
+export interface CommandDependencies {
+	clipboardService: ClipboardService;
+	vaultService: VaultService;
+	notificationService: NotificationService;
+	editorService: EditorService;
+}
+
 export class Command {
 	private clipboardService: ClipboardService;
 	private vaultService: VaultService;
 	private notificationService: NotificationService;
 	private editorService: EditorService;
 
-	constructor(clipboardService: ClipboardService, vaultService: VaultService, notificationService: NotificationService, editorService: EditorService) {
-		this.clipboardService = clipboardService;
-		this.vaultService = vaultService;
-		this.notificationService = notificationService;
-		this.editorService = editorService;
+	private readonly extension = '.md';
+	private readonly prefix = '![[';
+	private readonly suffix = ']]';
+
+	constructor(dependencies: CommandDependencies) {
+		this.clipboardService = dependencies.clipboardService;
+		this.vaultService = dependencies.vaultService;
+		this.notificationService = dependencies.notificationService;
+		this.editorService = dependencies.editorService;
 	}
 
 	execute(): void {
-		if (this.hasNoImage()) {
+		if (!this.hasImage()) {
 			this.notifyNoImage();
 			return;
 		}
@@ -26,20 +37,24 @@ export class Command {
 	}
 
 	private executeImagePaste(): void {
-		const imageBuffer: Buffer = this.readImage();
-		const filename: string = this.saveImage(imageBuffer);
-		const noteTitle: string = this.createNote(filename);
+		const noteTitle: string = this.createNote();
 		
 		if (this.isNoteBeingEdited()) {
 			this.insertNoteLinkAtCursor(noteTitle);
-			this.notifySuccessWithLink();
-		} else {
-			this.notifySuccess();
-		}
+		} 
+			
+		this.notifySuccess();
 	}
 
-	private hasNoImage(): boolean {
-		return this.clipboardService.hasNoImage();
+	private createNote() {
+		const imageBuffer: Buffer = this.readImage();
+		const filename: string = this.saveImage(imageBuffer);
+		const noteTitle: string = this.createNoteInVault(filename);
+		return noteTitle;
+	}
+
+	private hasImage(): boolean {
+		return this.clipboardService.hasImage();
 	}
 
 	private readImage(): Buffer {
@@ -50,24 +65,12 @@ export class Command {
 		return this.vaultService.saveImage(imageBuffer);
 	}
 
-	private createNote(filename: string): string {
+	private createNoteInVault(filename: string): string {
 		return this.vaultService.createNote(filename);
 	}
 
 	private notifySuccess(): void {
 		this.notificationService.success();
-	}
-
-	private notifySuccessWithLink(): void {
-		this.notificationService.success();
-	}
-
-	private notifyError(error: unknown): void {
-		if (error instanceof Error) {
-			this.notificationService.error(error);
-		} else {
-			this.notificationService.error(new Error('Unknown error'));
-		}
 	}
 	
 	private notifyNoImage(): void {
@@ -79,8 +82,8 @@ export class Command {
 	}
 
 	private insertNoteLinkAtCursor(noteTitle: string): void {
-		const cleanTitle: string = noteTitle.replace('.md', '');
-		const embedLink = `![[${cleanTitle}]]`;
+		const cleanTitle: string = noteTitle.replace(this.extension, '');
+		const embedLink = `${this.prefix}${cleanTitle}${this.suffix}`;
 		this.editorService.insertAtCursor(embedLink);
 	}
 }

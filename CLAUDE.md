@@ -136,6 +136,7 @@ MUST follow strict one class per file rule with only inner classes allowed as ex
 - Each file contains exactly one public class
 - Inner classes are permitted within their parent class
 - Extract utility classes to separate files immediately
+- Apply the rule systematically during refactoring, creating separate files and updating imports
 
 Example:
 ```typescript
@@ -150,6 +151,123 @@ export class ImageFormats { ... }
 // command.ts  
 import { ImageFormats } from './image-formats';
 export class Command { ... }
+```
+
+## UI Component Architecture
+MUST break composite UI components into individual classes that extend abstract base classes.
+- Create abstract base classes to define common structure and behavior
+- Implement individual setting/component classes that extend the base class
+- Each component class handles single responsibility (one setting, one feature)
+- Use composition in main UI classes to orchestrate individual components
+
+Example:
+```typescript
+❌ AVOID: Monolithic settings with inline Setting instances
+export class SettingsTab extends PluginSettingTab {
+  display(): void {
+    new Setting(containerEl)
+      .setName('Image folder')
+      .setDesc('Folder description')
+      .addText(/* inline logic */);
+    
+    new Setting(containerEl)
+      .setName('Notes folder')  
+      .setDesc('Notes description')
+      .addText(/* inline logic */);
+  }
+}
+
+✅ USE: Individual component classes extending base class
+// setting-component.ts
+export abstract class SettingComponent {
+  constructor(protected plugin: Plugin, protected containerEl: HTMLElement) {}
+  abstract render(): void;
+}
+
+// image-folder-setting.ts
+export class ImageFolderSetting extends SettingComponent {
+  render(): void {
+    new Setting(this.containerEl)
+      .setName('Image folder')
+      .setDesc('Folder description')
+      .addText(/* focused logic */);
+  }
+}
+
+// settings-tab.ts
+export class SettingsTab extends PluginSettingTab {
+  display(): void {
+    const settings: SettingComponent[] = [
+      new ImageFolderSetting(this.plugin, containerEl),
+      new ImageNotesFolderSetting(this.plugin, containerEl)
+    ];
+    settings.forEach(setting => setting.render());
+  }
+}
+```
+
+## Directory Structure Organization
+MUST organize files into logical folders by purpose rather than complexity. Use progressive organization starting with services.
+- Start with `services/` folder for business logic classes
+- Add `ui/` folder for user interface components
+- Add `utils/` folder for utility classes and helper functions  
+- Keep core plugin files at root level (main.ts, settings.ts, command.ts) for accessibility
+- Prefer minimal categorization over complex nested hierarchies
+
+Example:
+```
+❌ AVOID: Flat structure that becomes unwieldy
+src/
+├── main.ts
+├── command.ts
+├── settings.ts
+├── settings-tab.ts
+├── clipboard-service.ts
+├── vault-service.ts
+├── notification-service.ts
+├── editor-service.ts
+└── image-formats.ts
+
+✅ USE: Logical folder organization
+src/
+├── services/              🔧 Business logic services
+│   ├── clipboard-service.ts
+│   ├── vault-service.ts
+│   ├── notification-service.ts
+│   └── editor-service.ts
+├── ui/                   🎨 User interface components
+│   └── settings-tab.ts
+├── utils/                🔧 Utility classes
+│   └── image-formats.ts
+├── main.ts              🏠 Plugin entry point
+├── command.ts           📁 Main command handler
+└── settings.ts          ⚙️ Configuration interface
+```
+
+## Import Path Management During Refactoring
+MUST systematically update import paths when reorganizing file structure and verify builds immediately.
+- Update imports systematically when moving files to new folders
+- Use relative paths that reflect the new directory structure
+- Always run build verification after import path changes
+- Fix import errors immediately rather than batching changes
+- Use diagnostic tools to catch hidden import issues
+
+Example:
+```typescript
+❌ AVOID: Forgetting to update imports after moving files
+// After moving settings-tab.ts to ui/ folder
+import { SettingsTab } from './settings-tab'; // Will fail
+
+✅ USE: Systematic import path updates
+// Update main.ts import after folder reorganization
+import { SettingsTab } from './ui/settings-tab';
+
+// Update service imports after reorganization
+import { ImageFormats } from '../utils/image-formats';
+import { Settings } from '../settings';
+
+// Always verify with build
+npm run build // Must pass after structural changes
 ```
 
 ## Service Composition Architecture
@@ -188,6 +306,50 @@ export class Command {
     }
   }
 }
+```
+
+## Parameter Object Pattern for Dependencies
+MUST refactor multiple constructor parameters into typed parameter objects for maintainability.
+- When a class has 3+ constructor parameters, create an interface defining the dependencies
+- Use a single parameter object instead of individual parameters
+- Export the interface for type safety and reusability
+- Instantiate using object literal syntax for clarity
+
+Example:
+```typescript
+❌ AVOID: Multiple individual constructor parameters
+export class Command {
+  constructor(
+    clipboardService: ClipboardService,
+    vaultService: VaultService,
+    notificationService: NotificationService,
+    editorService: EditorService
+  ) {}
+}
+
+✅ USE: Parameter object with typed interface
+export interface CommandDependencies {
+  clipboardService: ClipboardService;
+  vaultService: VaultService;
+  notificationService: NotificationService;
+  editorService: EditorService;
+}
+
+export class Command {
+  constructor(dependencies: CommandDependencies) {
+    this.clipboardService = dependencies.clipboardService;
+    // ... other assignments
+  }
+}
+
+// Clear instantiation
+const services: CommandDependencies = {
+  clipboardService: new ClipboardService(),
+  vaultService: new VaultService(app, settings),
+  notificationService: new NotificationService(),
+  editorService: new EditorService(app)
+};
+this.command = new Command(services);
 ```
 
 ## Code Organization
@@ -399,8 +561,9 @@ this.app.vault.createBinary(filename, arrayBuffer);
 ## Control Flow Preferences
 MUST use guard clauses and positive logic for cleaner control flow.
 - Prefer guard clauses with early returns over nested if-else structures
-- Invert predicates to express conditions in positive terms when possible
+- Express predicates in positive terms rather than negative terms
 - Use explicit if-else statements over ternary operators for complex logic
+- Eliminate double negatives by converting negative predicates to positive forms
 
 Example:
 ```typescript
@@ -415,12 +578,82 @@ execute(): void {
 
 ✅ USE: Guard clause with positive logic
 execute(): void {
-  if (this.hasNoImage()) {
+  if (!this.hasImage()) {
     this.notifyError();
     return;
   }
   
   this.processImage();
+}
+```
+
+## Positive Predicate Expression
+MUST express predicates in positive terms to improve code readability and eliminate confusing double negatives.
+- Convert negative predicates like `hasNoImage()` to positive forms like `hasImage()`
+- Update method implementations to return positive conditions directly
+- Modify all callers to use positive logic with appropriate guard clauses
+- Avoid double negatives like `!hasNoImage()` in favor of `hasImage()`
+
+Example:
+```typescript
+❌ AVOID: Negative predicates with double negatives
+class ClipboardService {
+  hasNoImage(): boolean {
+    return !ImageFormats.check(formats);
+  }
+}
+
+// Usage creates double negative
+if (!clipboardService.hasNoImage()) {
+  // process image
+}
+
+✅ USE: Positive predicates with clear logic
+class ClipboardService {
+  hasImage(): boolean {
+    return ImageFormats.check(formats);
+  }
+}
+
+// Clear positive logic
+if (clipboardService.hasImage()) {
+  // process image
+}
+
+// Or clear guard clause
+if (!this.hasImage()) {
+  this.notifyNoImage();
+  return;
+}
+```
+
+## String Literal Constants
+MUST extract string literals as private readonly instance constants with simple, descriptive names.
+- Replace magic strings with named constants for maintainability
+- Use instance constants (not static) for simpler syntax
+- Choose concise names without semantic over-qualification
+- Group related constants together in the class
+
+Example:
+```typescript
+❌ AVOID: Magic strings scattered throughout code
+private insertNoteLinkAtCursor(noteTitle: string): void {
+  const cleanTitle = noteTitle.replace('.md', '');
+  const embedLink = `![[${cleanTitle}]]`;
+  this.editorService.insertAtCursor(embedLink);
+}
+
+✅ USE: Extracted string constants
+export class Command {
+  private readonly extension = '.md';
+  private readonly prefix = '![[';
+  private readonly suffix = ']]';
+  
+  private insertNoteLinkAtCursor(noteTitle: string): void {
+    const cleanTitle = noteTitle.replace(this.extension, '');
+    const embedLink = `${this.prefix}${cleanTitle}${this.suffix}`;
+    this.editorService.insertAtCursor(embedLink);
+  }
 }
 ```
 

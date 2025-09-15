@@ -8,19 +8,26 @@ export class EditorService {
 	}
 
 	isEditing(): boolean {
-		const activeView: MarkdownView | null = this.app.workspace.getActiveViewOfType(MarkdownView);
-		const isEditing: boolean = activeView !== null && activeView.getMode() === 'source';
-
-		return isEditing;
+		const activeView: MarkdownView | null = this.getActiveView();
+		const hasActiveView: boolean = activeView !== null;
+		const editing: boolean = hasActiveView && this.inSourceMode(activeView);
+		
+		return editing;
 	}
 
-	getActiveEditor(): Editor {
-		const activeView: MarkdownView | null = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (activeView === null || activeView.getMode() !== 'source') {
+	private getActiveView(): MarkdownView | null {
+		return this.app.workspace.getActiveViewOfType(MarkdownView);
+	}
 
+	private inSourceMode(activeView: MarkdownView | null) {
+		return activeView!.getMode() === 'source';
+	}
+
+	private getActiveEditor(): Editor {
+		if (!this.isEditing()) {
 			throw new Error('No active editor available');
 		}
-		const editor: Editor = activeView.editor;
+		const editor: Editor = this.getActiveView()!.editor;
 
 		return editor;
 	}

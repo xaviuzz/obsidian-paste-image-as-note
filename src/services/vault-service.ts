@@ -64,24 +64,15 @@ export class VaultService {
 		const noteFolder: string = this.settings.imageNotesFolder;
 		const imageFolder: string = this.settings.imageFolder;
 		
-		if (!noteFolder && !imageFolder) {
-			return imagePath;
+		let relativePath: string = imagePath;
+		
+		if (noteFolder && noteFolder === imageFolder) {
+			relativePath = imagePath.split(this.pathSeparator).pop() || imagePath;
+		} else if (noteFolder) {
+			relativePath = `${this.parentPath}${imagePath}`;
 		}
 		
-		if (!noteFolder && imageFolder) {
-			return imagePath;
-		}
-		
-		if (noteFolder && !imageFolder) {
-			return `${this.parentPath}${imagePath}`;
-		}
-		
-		if (noteFolder === imageFolder) {
-			const filename: string = imagePath.split(this.pathSeparator).pop() || imagePath;
-			return filename;
-		}
-		
-		return `${this.parentPath}${imagePath}`;
+		return relativePath;
 	}
 
 	private ensureFolderExists(folderPath: string): void {

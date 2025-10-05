@@ -3,6 +3,7 @@ import PasteImagePlugin from '../main';
 import { SettingComponent } from './setting-component';
 import { ImageFolderSetting } from './image-folder-setting';
 import { ImageNotesFolderSetting } from './image-notes-folder-setting';
+import { PreviewModalToggleSetting } from './preview-modal-toggle-setting';
 
 export class SettingsTab extends PluginSettingTab {
 	plugin: PasteImagePlugin;
@@ -20,7 +21,8 @@ export class SettingsTab extends PluginSettingTab {
 
 		const settings: SettingComponent[] = [
 			new ImageFolderSetting(this.plugin, containerEl),
-			new ImageNotesFolderSetting(this.plugin, containerEl)
+			new ImageNotesFolderSetting(this.plugin, containerEl),
+			new PreviewModalToggleSetting(this.plugin, containerEl)
 		];
 
 		settings.forEach(setting => setting.render());

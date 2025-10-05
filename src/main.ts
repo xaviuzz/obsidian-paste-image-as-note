@@ -28,10 +28,12 @@ export default class PasteImagePlugin extends Plugin {
 
 	private initializeCommand() {
 		const services: CommandDependencies = {
+			app: this.app,
 			clipboardService: new ClipboardService(),
 			vaultService: new VaultService(this.app, this.settings),
 			notificationService: new NotificationService(),
-			editorService: new EditorService(this.app)
+			editorService: new EditorService(this.app),
+			settings: this.settings
 		};
 
 		this.command = new Command(services);

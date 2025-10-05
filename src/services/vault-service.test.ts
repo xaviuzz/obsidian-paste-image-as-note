@@ -11,7 +11,8 @@ describe('VaultService', () => {
 		app = new FakeApp();
 		settings = {
 			imageFolder: '',
-			imageNotesFolder: ''
+			imageNotesFolder: '',
+			showPreviewModal: false
 		};
 		service = new VaultService(app as any, settings);
 	});

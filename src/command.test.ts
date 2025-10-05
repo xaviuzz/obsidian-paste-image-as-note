@@ -1,28 +1,58 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Command, CommandDependencies } from './command';
 import { ClipboardService } from './services/clipboard-service';
 import { VaultService } from './services/vault-service';
 import { NotificationService } from './services/notification-service';
 import { EditorService } from './services/editor-service';
+import { Settings } from './settings';
+
+vi.mock('./ui/image-preview-modal', () => {
+	return {
+		ImagePreviewModal: class FakeImagePreviewModal {
+			app: any;
+			imageBuffer: Buffer;
+
+			constructor(app: any, imageBuffer: Buffer) {
+				this.app = app;
+				this.imageBuffer = imageBuffer;
+			}
+
+			open(): void {
+				this.app.modalOpened = true;
+				this.app.modalImageBuffer = this.imageBuffer;
+			}
+
+			async waitForClose(): Promise<void> {
+				return Promise.resolve();
+			}
+		}
+	};
+});
 
 describe('Command', () => {
+	let app: FakeApp;
 	let clipboardService: FakeClipboardService;
 	let vaultService: FakeVaultService;
 	let notificationService: FakeNotificationService;
 	let editorService: FakeEditorService;
+	let settings: FakeSettings;
 	let command: Command;
 
 	beforeEach(() => {
+		app = new FakeApp();
 		clipboardService = new FakeClipboardService();
 		vaultService = new FakeVaultService();
 		notificationService = new FakeNotificationService();
 		editorService = new FakeEditorService();
+		settings = new FakeSettings();
 
 		const dependencies: CommandDependencies = {
+			app: app as any,
 			clipboardService: clipboardService as unknown as ClipboardService,
 			vaultService: vaultService as unknown as VaultService,
 			notificationService: notificationService as unknown as NotificationService,
-			editorService: editorService as unknown as EditorService
+			editorService: editorService as unknown as EditorService,
+			settings: settings as Settings
 		};
 		command = new Command(dependencies);
 	});
@@ -121,6 +151,59 @@ describe('Command', () => {
 			expect(vaultService.noteImagePath).toBe('images/test.png');
 		});
 	});
+
+	describe('preview modal workflow', () => {
+		it('creates note immediately when preview disabled', () => {
+			clipboardService.imageAvailable = true;
+			settings.showPreviewModal = false;
+
+			command.execute();
+
+			expect(vaultService.imageSaved).toBe(true);
+			expect(vaultService.noteCreated).toBe(true);
+			expect(notificationService.successCalled).toBe(true);
+		});
+
+		it('does not show modal when preview disabled', () => {
+			clipboardService.imageAvailable = true;
+			settings.showPreviewModal = false;
+
+			command.execute();
+
+			expect(app.modalOpened).toBe(false);
+		});
+
+		it('shows modal when preview enabled', async () => {
+			clipboardService.imageAvailable = true;
+			settings.showPreviewModal = true;
+
+			await command.execute();
+
+			expect(app.modalOpened).toBe(true);
+		});
+
+		it('creates note after modal closes when preview enabled', async () => {
+			clipboardService.imageAvailable = true;
+			settings.showPreviewModal = true;
+
+			await command.execute();
+
+			expect(vaultService.imageSaved).toBe(true);
+			expect(vaultService.noteCreated).toBe(true);
+			expect(notificationService.successCalled).toBe(true);
+		});
+
+		it('uses same image buffer for preview and note creation', async () => {
+			clipboardService.imageAvailable = true;
+			settings.showPreviewModal = true;
+			clipboardService.imageData = Buffer.from('preview-test-data');
+
+			await command.execute();
+
+			expect(app.modalImageBuffer?.toString()).toBe('preview-test-data');
+			expect(vaultService.savedImageBuffer?.toString()).toBe('preview-test-data');
+		});
+	});
 });
 
 class FakeClipboardService {
@@ -195,4 +278,23 @@ class FakeEditorService {
 		this.textInserted = true;
 		this.insertedText = text;
 	}
+}
+
+class FakeSettings implements Settings {
+	imageFolder: string = '';
+	imageNotesFolder: string = '';
+	showPreviewModal: boolean = false;
+}
+
+class FakeApp {
+	modalOpened: boolean = false;
+	modalImageBuffer: Buffer | null = null;
+
+	workspace = {
+		on: () => ({})
+	};
+
+	vault = {
+		createBinary: () => Promise.resolve()
+	};
 }

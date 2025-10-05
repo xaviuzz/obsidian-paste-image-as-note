@@ -146,6 +146,182 @@ command.ts
 class Command
 ```
 
+# Testing Methodology
+
+## Testing Philosophy
+MUST focus on behavior verification over implementation details to enable fearless refactoring.
+- Test observable behavior and outcomes, not internal implementation
+- Verify "what the code does" not "how it does it"
+- Tests should survive internal refactoring without modification
+- Use descriptive test names that express behavior and expected outcome
+
+Example:
+```typescript
+❌ AVOID: Testing implementation details
+it('calls vault.createBinary with correct parameters', () => {
+  service.saveImage(buffer);
+  expect(vault.createBinary).toHaveBeenCalledWith(path, arrayBuffer);
+});
+
+✅ USE: Testing observable behavior
+it('returns folder/filename when image folder configured', () => {
+  settings.imageFolder = 'images';
+
+  const result: string = service.saveImage(imageBuffer);
+
+  expect(result).toMatch(/^images\/pasted-image-\d+\.png$/);
+});
+```
+
+## Test Subject Isolation
+MUST isolate SUT (Subject Under Test) construction knowledge from test logic.
+- Extract SUT construction into dedicated factory classes or setup functions
+- Test code should not contain details about SUT dependencies
+- Use factory pattern to encapsulate complex object creation
+- Create infrastructure (factories, fakes) only when needed during test writing
+
+Example:
+```typescript
+❌ AVOID: SUT construction knowledge in tests
+it('processes image correctly', () => {
+  const clipboardService = new FakeClipboardService();
+  const vaultService = new FakeVaultService(app, settings);
+  const notificationService = new FakeNotificationService();
+  const editorService = new FakeEditorService(app);
+  const sut = new Command({
+    clipboardService,
+    vaultService,
+    notificationService,
+    editorService
+  });
+
+  sut.execute();
+});
+
+✅ USE: Isolated construction in beforeEach or factory
+beforeEach(() => {
+  app = new FakeApp();
+  settings = { imageFolder: '', imageNotesFolder: '' };
+  service = new VaultService(app as any, settings);
+});
+
+it('processes image correctly', () => {
+  service.execute();
+});
+```
+
+## Fake Implementation Pattern
+MUST use minimal fake implementations over mocks for better readability and maintainability.
+- Implement only the behavior needed for tests with simplified in-memory logic
+- Fakes should implement same interface as production code
+- Place fake/helper classes at end of test file after all test suites
+- Prefer fakes over mocking frameworks for simpler, more explicit tests
+
+Example:
+```typescript
+❌ AVOID: Complex mocking setup
+const mockVault = {
+  createBinary: jest.fn(),
+  create: jest.fn(),
+  getAbstractFileByPath: jest.fn()
+};
+
+✅ USE: Simple fake implementation at end of file
+describe('VaultService', () => {
+  // All test suites here
+});
+
+// Auxiliary classes at end
+class FakeVault {
+  private files: Map<string, VaultFile> = new Map();
+
+  createBinary(path: string, data: ArrayBuffer): void {
+    this.files.set(path, { path, content: data });
+  }
+
+  getCreatedContent(path: string): string | undefined {
+    return this.files.get(path)?.content as string;
+  }
+}
+```
+
+## Test Organization Structure
+MUST organize tests hierarchically using nested describe blocks for clarity.
+- Structure: Service → Method/Behavior → Specific Scenarios
+- Group related test cases under descriptive behavior blocks
+- Use consistent naming pattern: "behavior description" + "condition/context"
+
+Example:
+```typescript
+describe('VaultService', () => {
+  describe('getImagePath behavior', () => {
+    it('returns filename only when no image folder configured', () => {});
+    it('returns folder/filename when image folder configured', () => {});
+  });
+
+  describe('relative path calculation', () => {
+    it('uses image path as-is when no folders configured', () => {});
+    it('uses filename only when both folders are the same', () => {});
+  });
+});
+```
+
+## Test Selection Criteria
+MUST apply strategic selection to determine what to test at unit level.
+- **DO test**: Business logic, algorithms, complex behavior, path resolution, state management
+- **DO NOT test**: Thin wrappers around external APIs, pure UI components, simple delegators
+- **DO NOT test**: Classes that only forward calls without logic (ClipboardService wrapping Electron)
+- Save thin adapters and UI components for integration/E2E testing
+
+Example:
+```
+✅ SHOULD TEST at unit level:
+- VaultService (complex path resolution logic)
+- ImageFormats (pure utility with business rules)
+- EditorService (state detection logic)
+- Command (orchestration workflows)
+
+❌ SHOULD NOT TEST at unit level:
+- NotificationService (pure delegation to Obsidian Notice API)
+- ClipboardService (thin wrapper around Electron clipboard)
+- UI SettingsTab components (better tested via integration)
+```
+
+## Test File Organization
+MUST place auxiliary classes and test infrastructure at end of test files.
+- Present tests first to show "what" is being verified
+- Place helper classes, fakes, and factories after all test suites
+- This improves readability by prioritizing behavior over infrastructure
+
+Example:
+```typescript
+// Test suites first
+describe('VaultService', () => {
+  let service: VaultService;
+
+  beforeEach(() => {
+    service = new VaultService(new FakeApp() as any, settings);
+  });
+
+  it('behavior test 1', () => {});
+  it('behavior test 2', () => {});
+});
+
+// Auxiliary classes at end
+interface VaultFile {
+  path: string;
+  content?: string | ArrayBuffer;
+}
+
+class FakeVault {
+  // Implementation
+}
+
+class FakeApp {
+  // Implementation
+}
+```
+
 # Code Style and Preferences
 
 ## File Organization

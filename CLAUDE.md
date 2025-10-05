@@ -91,12 +91,14 @@ Optional image preview modal with configuration is documented in `.claude/stage-
 - Configuration toggle: Enable/disable modal (default: disabled)
 - Quick workflow: Enter key creates note with current values
 
-**Status**: Planning complete, ready for implementation
-- ⏳ Step 1: Basic Image Preview Modal (View Only)
+**Status**: Step 1 complete, Steps 2-3 pending
+- ✅ Step 1: Basic Image Preview Modal (View Only)
 - ⏳ Step 2: Editable Image Name
 - ⏳ Step 3: Add Tags to Image Note
 
 **Approach**: Feature-driven increments where each step delivers a complete, usable feature.
+
+**Step 1 Result**: Users can enable "Show preview before creating note" setting. When enabled, pasting images displays a modal with image preview. Pressing Enter or clicking outside creates the note with default values. Fully tested with 39/39 tests passing.
 
 # Implementation Methodology
 
@@ -178,7 +180,8 @@ MUST isolate SUT (Subject Under Test) construction knowledge from test logic.
 - Extract SUT construction into dedicated factory classes or setup functions
 - Test code should not contain details about SUT dependencies
 - Use factory pattern to encapsulate complex object creation
-- Create infrastructure (factories, fakes) only when needed during test writing
+- **DO NOT create test infrastructure upfront** - create fakes, factories, and helpers only as you discover the need while writing tests
+- Build test infrastructure incrementally and on-demand rather than speculatively
 
 Example:
 ```typescript

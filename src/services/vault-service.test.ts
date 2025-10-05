@@ -35,6 +35,15 @@ describe('VaultService', () => {
 
 			expect(result).toMatch(/^images\/pasted-image-\d+\.png$/);
 		});
+
+		it('uses custom name with underscores for image filename', () => {
+			const imageBuffer: Buffer = Buffer.from('fake-image-data');
+			const customName = 'my_custom_name';
+
+			const result: string = service.saveImage(imageBuffer, customName);
+
+			expect(result).toBe('my_custom_name.png');
+		});
 	});
 
 	describe('getNotePath behavior', () => {
@@ -57,6 +66,15 @@ describe('VaultService', () => {
 			const createdPath: string = `notes/${result}`;
 			const content: string | undefined = app.vault.getCreatedContent(createdPath);
 			expect(content).toBeDefined();
+		});
+
+		it('uses custom name with underscores for note filename', () => {
+			const imagePath = 'test-image.png';
+			const customName = 'my_custom_note';
+
+			const result: string = service.createNote(imagePath, customName);
+
+			expect(result).toBe('my_custom_note.md');
 		});
 	});
 

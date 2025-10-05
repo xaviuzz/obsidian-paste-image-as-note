@@ -119,7 +119,7 @@ export class ImagePreviewModal extends Modal {
 
 	private getSubmittedName(): string {
 		if (this.nameInput && this.nameInput.value.trim()) {
-			return this.nameInput.value.trim();
+			return this.nameInput.value.trim().replace(/ /g, '_');
 		}
 		return this.generateDefaultName();
 	}

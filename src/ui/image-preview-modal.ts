@@ -11,13 +11,18 @@ export class ImagePreviewModal extends Modal {
 	private resolvePromise: ((result: ModalResult) => void) | null = null;
 	private nameInput: HTMLInputElement | null = null;
 	private tagsInput: HTMLInputElement | null = null;
+	private tagsChipContainer: HTMLDivElement | null = null;
+	private tagSuggestionsContainer: HTMLDivElement | null = null;
+	private selectedTags: string[] = [];
 	private cancelled: boolean = true;
+	private allVaultTags: string[] = [];
 
 	private readonly defaultPrefix = 'pasted-image-';
 
 	constructor(app: App, imageBuffer: Buffer) {
 		super(app);
 		this.imageBuffer = imageBuffer;
+		this.loadVaultTags();
 	}
 
 	onOpen(): void {
@@ -60,25 +65,55 @@ export class ImagePreviewModal extends Modal {
 		tagsContainer.style.marginTop = '10px';
 
 		const tagsLabel: HTMLLabelElement = tagsContainer.createEl('label', {
-			text: 'Tags (comma-separated):'
+			text: 'Tags:'
 		});
 		tagsLabel.style.display = 'block';
 		tagsLabel.style.marginBottom = '5px';
 
-		this.tagsInput = tagsContainer.createEl('input');
+		this.tagsChipContainer = tagsContainer.createDiv();
+		this.tagsChipContainer.style.display = 'flex';
+		this.tagsChipContainer.style.flexWrap = 'wrap';
+		this.tagsChipContainer.style.gap = '6px';
+		this.tagsChipContainer.style.marginBottom = '8px';
+		this.tagsChipContainer.style.minHeight = '32px';
+		this.tagsChipContainer.style.padding = '4px';
+		this.tagsChipContainer.style.border = '1px solid var(--background-modifier-border)';
+		this.tagsChipContainer.style.borderRadius = '4px';
+		this.tagsChipContainer.style.background = 'var(--background-primary)';
+
+		const tagInputWrapper: HTMLDivElement = tagsContainer.createDiv();
+		tagInputWrapper.style.position = 'relative';
+
+		this.tagsInput = tagInputWrapper.createEl('input');
 		this.tagsInput.type = 'text';
-		this.tagsInput.placeholder = 'e.g., screenshot, work, project-x';
+		this.tagsInput.placeholder = 'Type to search tags...';
 		this.tagsInput.style.width = '100%';
 		this.tagsInput.style.padding = '8px';
 		this.tagsInput.style.marginBottom = '10px';
 
+		this.tagSuggestionsContainer = tagInputWrapper.createDiv();
+		this.tagSuggestionsContainer.style.display = 'none';
+
+		this.tagsInput.addEventListener('input', () => {
+			this.updateTagSuggestions();
+		});
+
 		const hint: HTMLParagraphElement = contentEl.createEl('p', {
-			text: 'Press Enter to create note'
+			text: 'Press Enter in name field to create note'
 		});
 		hint.style.textAlign = 'center';
 		hint.style.color = 'var(--text-muted)';
 
 		this.scope.register([], 'Enter', () => {
+			if (document.activeElement === this.tagsInput) {
+				if (this.tagsInput && this.tagsInput.value.trim()) {
+					this.addTag(this.tagsInput.value.trim());
+					this.tagsInput.value = '';
+					this.hideSuggestions();
+				}
+				return false;
+			}
+
 			this.submit();
 			return false;
 		});
@@ -125,16 +160,145 @@ export class ImagePreviewModal extends Modal {
 	}
 
 	private getSubmittedTags(): string[] {
-		if (this.tagsInput && this.tagsInput.value.trim()) {
-			return this.tagsInput.value
-				.split(',')
-				.map((tag: string): string => tag.trim())
-				.filter((tag: string): boolean => tag.length > 0);
-		}
-		return [];
+		return this.selectedTags;
 	}
 
 	private generateDefaultName(): string {
 		return `${this.defaultPrefix}${Date.now()}`;
+	}
+
+	private loadVaultTags(): void {
+		const metadataCache = this.app.metadataCache;
+		const allTags: Set<string> = new Set();
+
+		const files = this.app.vault.getMarkdownFiles();
+
+		files.forEach((file) => {
+			const cache = metadataCache.getFileCache(file);
+			if (cache?.tags) {
+				cache.tags.forEach((tagRef) => {
+					const tag: string = tagRef.tag.replace('#', '');
+					allTags.add(tag);
+				});
+			}
+			if (cache?.frontmatter?.tags) {
+				const frontmatterTags = cache.frontmatter.tags;
+				if (Array.isArray(frontmatterTags)) {
+					frontmatterTags.forEach((tag: string) => allTags.add(tag));
+				}
+			}
+		});
+
+		this.allVaultTags = Array.from(allTags).sort();
+	}
+
+	private addTag(tag: string): void {
+		if (tag && !this.selectedTags.includes(tag)) {
+			this.selectedTags.push(tag);
+			this.renderTagChips();
+		}
+	}
+
+	private removeTag(tag: string): void {
+		this.selectedTags = this.selectedTags.filter((t: string): boolean => t !== tag);
+		this.renderTagChips();
+	}
+
+	private renderTagChips(): void {
+		if (!this.tagsChipContainer) {
+			return;
+		}
+
+		this.tagsChipContainer.empty();
+
+		this.selectedTags.forEach((tag: string) => {
+			const chip: HTMLDivElement = this.tagsChipContainer!.createDiv();
+			chip.style.display = 'inline-flex';
+			chip.style.alignItems = 'center';
+			chip.style.gap = '4px';
+			chip.style.padding = '4px 8px';
+			chip.style.background = 'var(--background-modifier-border)';
+			chip.style.borderRadius = '4px';
+			chip.style.fontSize = '12px';
+			chip.style.cursor = 'default';
+
+			chip.createSpan({ text: tag });
+
+			const removeBtn: HTMLSpanElement = chip.createSpan({ text: '×' });
+			removeBtn.style.cursor = 'pointer';
+			removeBtn.style.fontSize = '16px';
+			removeBtn.style.fontWeight = 'bold';
+			removeBtn.style.marginLeft = '2px';
+			removeBtn.addEventListener('click', () => {
+				this.removeTag(tag);
+			});
+		});
+	}
+
+	private updateTagSuggestions(): void {
+		if (!this.tagsInput || !this.tagSuggestionsContainer) {
+			return;
+		}
+
+		const query: string = this.tagsInput.value.toLowerCase().trim();
+
+		if (!query) {
+			this.hideSuggestions();
+			return;
+		}
+
+		const matches: string[] = this.allVaultTags
+			.filter((tag: string): boolean =>
+				tag.toLowerCase().includes(query) && !this.selectedTags.includes(tag)
+			)
+			.slice(0, 10);
+
+		if (matches.length === 0) {
+			this.hideSuggestions();
+			return;
+		}
+
+		this.tagSuggestionsContainer.empty();
+		this.tagSuggestionsContainer.style.display = 'block';
+		this.tagSuggestionsContainer.style.position = 'absolute';
+		this.tagSuggestionsContainer.style.top = '0px';
+		this.tagSuggestionsContainer.style.left = '0';
+		this.tagSuggestionsContainer.style.right = '0';
+		this.tagSuggestionsContainer.style.background = 'var(--background-primary)';
+		this.tagSuggestionsContainer.style.border = '1px solid var(--background-modifier-border)';
+		this.tagSuggestionsContainer.style.borderRadius = '4px';
+		this.tagSuggestionsContainer.style.maxHeight = '200px';
+		this.tagSuggestionsContainer.style.overflowY = 'auto';
+		this.tagSuggestionsContainer.style.zIndex = '1000';
+		this.tagSuggestionsContainer.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+
+		matches.forEach((tag: string) => {
+			const suggestion: HTMLDivElement = this.tagSuggestionsContainer!.createDiv();
+			suggestion.style.padding = '8px 12px';
+			suggestion.style.cursor = 'pointer';
+			suggestion.textContent = tag;
+
+			suggestion.addEventListener('mouseenter', () => {
+				suggestion.style.background = 'var(--background-modifier-hover)';
+			});
+
+			suggestion.addEventListener('mouseleave', () => {
+				suggestion.style.background = '';
+			});
+
+			suggestion.addEventListener('click', () => {
+				this.addTag(tag);
+				if (this.tagsInput) {
+					this.tagsInput.value = '';
+				}
+				this.hideSuggestions();
+			});
+		});
+	}
+
+	private hideSuggestions(): void {
+		if (this.tagSuggestionsContainer) {
+			this.tagSuggestionsContainer.style.display = 'none';
+		}
 	}
 }

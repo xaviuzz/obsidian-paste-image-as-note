@@ -22,8 +22,11 @@ vi.mock('./ui/image-preview-modal', () => {
 				this.app.modalImageBuffer = this.imageBuffer;
 			}
 
-			async waitForClose(): Promise<{ name: string; tags: string[] }> {
-				return Promise.resolve({ name: 'pasted-image-123', tags: [] });
+			async waitForClose(): Promise<{ name: string; tags: string[]; cancelled?: boolean }> {
+				if (this.app.modalShouldCancel) {
+					return Promise.resolve({ name: '', tags: [], cancelled: true });
+				}
+				return Promise.resolve({ name: 'pasted-image-123', tags: [], cancelled: false });
 			}
 		}
 	};
@@ -203,6 +206,28 @@ describe('Command', () => {
 			expect(app.modalImageBuffer?.toString()).toBe('preview-test-data');
 			expect(vaultService.savedImageBuffer?.toString()).toBe('preview-test-data');
 		});
+
+		it('does not create note when modal is cancelled', async () => {
+			clipboardService.imageAvailable = true;
+			settings.showPreviewModal = true;
+			app.modalShouldCancel = true;
+
+			await command.execute();
+
+			expect(vaultService.imageSaved).toBe(false);
+			expect(vaultService.noteCreated).toBe(false);
+			expect(notificationService.successCalled).toBe(false);
+		});
+
+		it('opens modal even when user will cancel', async () => {
+			clipboardService.imageAvailable = true;
+			settings.showPreviewModal = true;
+			app.modalShouldCancel = true;
+
+			await command.execute();
+
+			expect(app.modalOpened).toBe(true);
+		});
 	});
 });
 
@@ -289,6 +314,7 @@ class FakeSettings implements Settings {
 class FakeApp {
 	modalOpened: boolean = false;
 	modalImageBuffer: Buffer | null = null;
+	modalShouldCancel: boolean = false;
 
 	workspace = {
 		on: () => ({})

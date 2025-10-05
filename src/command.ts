@@ -62,6 +62,11 @@ export class Command {
 		const modal: ImagePreviewModal = new ImagePreviewModal(this.app, imageBuffer);
 		modal.open();
 		const result: ModalResult = await modal.waitForClose();
+
+		if (result.cancelled) {
+			return;
+		}
+
 		this.createNoteFromBufferWithNameAndTags(imageBuffer, result.name, result.tags);
 	}
 

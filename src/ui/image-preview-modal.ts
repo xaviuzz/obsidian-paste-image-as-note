@@ -3,6 +3,7 @@ import { App, Modal } from 'obsidian';
 export interface ModalResult {
 	name: string;
 	tags: string[];
+	cancelled?: boolean;
 }
 
 export class ImagePreviewModal extends Modal {
@@ -10,6 +11,7 @@ export class ImagePreviewModal extends Modal {
 	private resolvePromise: ((result: ModalResult) => void) | null = null;
 	private nameInput: HTMLInputElement | null = null;
 	private tagsInput: HTMLInputElement | null = null;
+	private cancelled: boolean = true;
 
 	private readonly defaultPrefix = 'pasted-image-';
 
@@ -89,7 +91,7 @@ export class ImagePreviewModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 		if (this.resolvePromise) {
-			const result: ModalResult = this.getSubmittedResult();
+			const result: ModalResult = this.getResult();
 			this.resolvePromise(result);
 		}
 	}
@@ -101,13 +103,18 @@ export class ImagePreviewModal extends Modal {
 	}
 
 	private submit(): void {
+		this.cancelled = false;
 		this.close();
 	}
 
-	private getSubmittedResult(): ModalResult {
+	private getResult(): ModalResult {
+		if (this.cancelled) {
+			return { name: '', tags: [], cancelled: true };
+		}
+
 		const name: string = this.getSubmittedName();
 		const tags: string[] = this.getSubmittedTags();
-		return { name, tags };
+		return { name, tags, cancelled: false };
 	}
 
 	private getSubmittedName(): string {

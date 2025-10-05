@@ -81,7 +81,7 @@ Folder configuration functionality is documented in `.claude/stage-three-plan.md
 
 **Result**: Complete folder organization system with automatic folder creation, relative path handling, and professional settings integration.
 
-## Stage Four Plan 🚧 IN PROGRESS
+## Stage Four Plan ✅ COMPLETED
 Optional image preview modal with configuration is documented in `.claude/stage-four-plan.md`
 
 **Goal**: Add optional modal UI before creating image note for preview, naming, and tagging
@@ -91,14 +91,18 @@ Optional image preview modal with configuration is documented in `.claude/stage-
 - Configuration toggle: Enable/disable modal (default: disabled)
 - Quick workflow: Enter key creates note with current values
 
-**Status**: Step 1 complete, Steps 2-3 pending
+**Status**: All steps complete ✅
 - ✅ Step 1: Basic Image Preview Modal (View Only)
-- ⏳ Step 2: Editable Image Name
-- ⏳ Step 3: Add Tags to Image Note
+- ✅ Step 2: Editable Image Name
+- ✅ Step 3: Add Tags to Image Note
 
 **Approach**: Feature-driven increments where each step delivers a complete, usable feature.
 
 **Step 1 Result**: Users can enable "Show preview before creating note" setting. When enabled, pasting images displays a modal with image preview. Pressing Enter or clicking outside creates the note with default values. Fully tested with 39/39 tests passing.
+
+**Step 2 Result**: Preview modal now includes editable name input field pre-filled with default timestamp-based name. Users can customize both image filename and note title before pressing Enter. Empty input falls back to default name. Full integration with VaultService custom naming. All 39 tests passing.
+
+**Step 3 Result**: Preview modal includes tags input field accepting comma-separated tags. Tags are parsed and added to note as YAML frontmatter. Empty tags input omits frontmatter (backward compatible). VaultService generates proper YAML structure. Complete end-to-end integration with 44/44 tests passing.
 
 # Implementation Methodology
 

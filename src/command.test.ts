@@ -22,8 +22,8 @@ vi.mock('./ui/image-preview-modal', () => {
 				this.app.modalImageBuffer = this.imageBuffer;
 			}
 
-			async waitForClose(): Promise<void> {
-				return Promise.resolve();
+			async waitForClose(): Promise<{ name: string; tags: string[] }> {
+				return Promise.resolve({ name: 'pasted-image-123', tags: [] });
 			}
 		}
 	};

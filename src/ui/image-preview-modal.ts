@@ -1,9 +1,15 @@
 import { App, Modal } from 'obsidian';
 
+export interface ModalResult {
+	name: string;
+	tags: string[];
+}
+
 export class ImagePreviewModal extends Modal {
 	private imageBuffer: Buffer;
-	private resolvePromise: ((name: string) => void) | null = null;
+	private resolvePromise: ((result: ModalResult) => void) | null = null;
 	private nameInput: HTMLInputElement | null = null;
+	private tagsInput: HTMLInputElement | null = null;
 
 	private readonly defaultPrefix = 'pasted-image-';
 
@@ -21,7 +27,7 @@ export class ImagePreviewModal extends Modal {
 		const arrayBuffer: ArrayBuffer = this.imageBuffer.buffer.slice(
 			this.imageBuffer.byteOffset,
 			this.imageBuffer.byteOffset + this.imageBuffer.byteLength
-		);
+		) as ArrayBuffer;
 		const blob: Blob = new Blob([arrayBuffer], { type: 'image/png' });
 		const imageUrl: string = URL.createObjectURL(blob);
 		
@@ -47,18 +53,34 @@ export class ImagePreviewModal extends Modal {
 		this.nameInput.style.width = '100%';
 		this.nameInput.style.padding = '8px';
 		this.nameInput.style.marginBottom = '10px';
-		
-		const hint: HTMLParagraphElement = contentEl.createEl('p', { 
-			text: 'Press Enter to create note' 
+
+		const tagsContainer: HTMLDivElement = contentEl.createDiv();
+		tagsContainer.style.marginTop = '10px';
+
+		const tagsLabel: HTMLLabelElement = tagsContainer.createEl('label', {
+			text: 'Tags (comma-separated):'
+		});
+		tagsLabel.style.display = 'block';
+		tagsLabel.style.marginBottom = '5px';
+
+		this.tagsInput = tagsContainer.createEl('input');
+		this.tagsInput.type = 'text';
+		this.tagsInput.placeholder = 'e.g., screenshot, work, project-x';
+		this.tagsInput.style.width = '100%';
+		this.tagsInput.style.padding = '8px';
+		this.tagsInput.style.marginBottom = '10px';
+
+		const hint: HTMLParagraphElement = contentEl.createEl('p', {
+			text: 'Press Enter to create note'
 		});
 		hint.style.textAlign = 'center';
 		hint.style.color = 'var(--text-muted)';
-		
+
 		this.scope.register([], 'Enter', () => {
 			this.submit();
 			return false;
 		});
-		
+
 		this.nameInput.focus();
 		this.nameInput.select();
 	}
@@ -67,12 +89,12 @@ export class ImagePreviewModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 		if (this.resolvePromise) {
-			const name: string = this.getSubmittedName();
-			this.resolvePromise(name);
+			const result: ModalResult = this.getSubmittedResult();
+			this.resolvePromise(result);
 		}
 	}
 
-	waitForClose(): Promise<string> {
+	waitForClose(): Promise<ModalResult> {
 		return new Promise((resolve) => {
 			this.resolvePromise = resolve;
 		});
@@ -82,11 +104,27 @@ export class ImagePreviewModal extends Modal {
 		this.close();
 	}
 
+	private getSubmittedResult(): ModalResult {
+		const name: string = this.getSubmittedName();
+		const tags: string[] = this.getSubmittedTags();
+		return { name, tags };
+	}
+
 	private getSubmittedName(): string {
 		if (this.nameInput && this.nameInput.value.trim()) {
 			return this.nameInput.value.trim();
 		}
 		return this.generateDefaultName();
+	}
+
+	private getSubmittedTags(): string[] {
+		if (this.tagsInput && this.tagsInput.value.trim()) {
+			return this.tagsInput.value
+				.split(',')
+				.map((tag: string): string => tag.trim())
+				.filter((tag: string): boolean => tag.length > 0);
+		}
+		return [];
 	}
 
 	private generateDefaultName(): string {

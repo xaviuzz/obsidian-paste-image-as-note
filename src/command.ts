@@ -4,7 +4,7 @@ import { VaultService } from './services/vault-service';
 import { NotificationService } from './services/notification-service';
 import { EditorService } from './services/editor-service';
 import { Settings } from './settings';
-import { ImagePreviewModal } from './ui/image-preview-modal';
+import { ImagePreviewModal, ModalResult } from './ui/image-preview-modal';
 
 
 export interface CommandDependencies {
@@ -61,8 +61,8 @@ export class Command {
 		const imageBuffer: Buffer = this.readImage();
 		const modal: ImagePreviewModal = new ImagePreviewModal(this.app, imageBuffer);
 		modal.open();
-		const customName: string = await modal.waitForClose();
-		this.createNoteFromBufferWithName(imageBuffer, customName);
+		const result: ModalResult = await modal.waitForClose();
+		this.createNoteFromBufferWithNameAndTags(imageBuffer, result.name, result.tags);
 	}
 
 	private createNoteFromBuffer(imageBuffer: Buffer): void {
@@ -76,9 +76,9 @@ export class Command {
 		this.notifySuccess();
 	}
 
-	private createNoteFromBufferWithName(imageBuffer: Buffer, customName: string): void {
+	private createNoteFromBufferWithNameAndTags(imageBuffer: Buffer, customName: string, tags: string[]): void {
 		const filename: string = this.saveImageWithName(imageBuffer, customName);
-		const noteTitle: string = this.createNoteInVaultWithName(filename, customName);
+		const noteTitle: string = this.createNoteInVaultWithNameAndTags(filename, customName, tags);
 
 		if (this.isNoteBeingEdited()) {
 			this.insertNoteLinkAtCursor(noteTitle);
@@ -112,8 +112,8 @@ export class Command {
 		return this.vaultService.createNote(filename);
 	}
 
-	private createNoteInVaultWithName(filename: string, customName: string): string {
-		return this.vaultService.createNote(filename, customName);
+	private createNoteInVaultWithNameAndTags(filename: string, customName: string, tags: string[]): string {
+		return this.vaultService.createNote(filename, customName, tags);
 	}
 
 	private notifySuccess(): void {

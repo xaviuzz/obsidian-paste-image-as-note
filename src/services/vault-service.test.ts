@@ -151,6 +151,80 @@ describe('VaultService', () => {
 			expect(app.vault.hasFolder('')).toBe(false);
 		});
 	});
+
+	describe('tags frontmatter behavior', () => {
+		it('creates note without frontmatter when no tags provided', () => {
+			const imagePath = 'test-image.png';
+
+			service.createNote(imagePath, undefined, undefined);
+
+			const files: VaultFile[] = Array.from((app.vault as any).files.values());
+			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
+				f.path.includes('.md')
+			);
+			expect(note).toBeDefined();
+			expect(note?.content).toBe('![](test-image.png)');
+		});
+
+		it('creates note without frontmatter when empty tags array provided', () => {
+			const imagePath = 'test-image.png';
+
+			service.createNote(imagePath, undefined, []);
+
+			const files: VaultFile[] = Array.from((app.vault as any).files.values());
+			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
+				f.path.includes('.md')
+			);
+			expect(note).toBeDefined();
+			expect(note?.content).toBe('![](test-image.png)');
+		});
+
+		it('creates note with YAML frontmatter when tags provided', () => {
+			const imagePath = 'test-image.png';
+			const tags: string[] = ['screenshot', 'work'];
+
+			service.createNote(imagePath, undefined, tags);
+
+			const files: VaultFile[] = Array.from((app.vault as any).files.values());
+			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
+				f.path.includes('.md')
+			);
+			expect(note).toBeDefined();
+			expect(note?.content).toContain('---');
+			expect(note?.content).toContain('tags: ["screenshot", "work"]');
+		});
+
+		it('creates note with frontmatter before image markdown', () => {
+			const imagePath = 'test-image.png';
+			const tags: string[] = ['test'];
+
+			service.createNote(imagePath, undefined, tags);
+
+			const files: VaultFile[] = Array.from((app.vault as any).files.values());
+			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
+				f.path.includes('.md')
+			);
+			expect(note).toBeDefined();
+			const content: string = note?.content as string;
+			const frontmatterIndex: number = content.indexOf('---');
+			const imageIndex: number = content.indexOf('![](');
+			expect(frontmatterIndex).toBeLessThan(imageIndex);
+		});
+
+		it('supports multiple tags in frontmatter', () => {
+			const imagePath = 'test-image.png';
+			const tags: string[] = ['tag1', 'tag2', 'tag3', 'tag4'];
+
+			service.createNote(imagePath, undefined, tags);
+
+			const files: VaultFile[] = Array.from((app.vault as any).files.values());
+			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
+				f.path.includes('.md')
+			);
+			expect(note).toBeDefined();
+			expect(note?.content).toContain('tags: ["tag1", "tag2", "tag3", "tag4"]');
+		});
+	});
 });
 
 interface VaultFile {

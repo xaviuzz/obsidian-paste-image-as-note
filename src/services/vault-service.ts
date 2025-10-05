@@ -37,15 +37,17 @@ export class VaultService {
 		this.app.vault.createBinary(imagePath, arrayBuffer);
 	}
 
-	createNote(imagePath: string, customName?: string): string {
-		const noteFilename: string = customName 
-			? `${customName}${this.noteExtension}` 
+	createNote(imagePath: string, customName?: string, tags?: string[]): string {
+		const noteFilename: string = customName
+			? `${customName}${this.noteExtension}`
 			: `${this.notePrefix}${Date.now()}${this.noteExtension}`;
 		const notePath: string = this.getNotePath(noteFilename);
-		const noteContent = `${this.markdownImagePrefix}${this.getRelativeImagePath(imagePath, notePath)}${this.markdownImageSuffix}`;
-		
+		const frontmatter: string = this.generateFrontmatter(tags);
+		const imageMarkdown: string = `${this.markdownImagePrefix}${this.getRelativeImagePath(imagePath, notePath)}${this.markdownImageSuffix}`;
+		const noteContent: string = frontmatter ? `${frontmatter}\n${imageMarkdown}` : imageMarkdown;
+
 		this.ensureFolderExists(this.settings.imageNotesFolder);
-		
+
 		this.app.vault.create(notePath, noteContent);
 		return noteFilename;
 	}
@@ -83,5 +85,14 @@ export class VaultService {
 		if (folderPath && !this.app.vault.getAbstractFileByPath(folderPath)) {
 			this.app.vault.createFolder(folderPath);
 		}
+	}
+
+	private generateFrontmatter(tags?: string[]): string {
+		if (!tags || tags.length === 0) {
+			return '';
+		}
+
+		const tagsList: string = tags.map((tag: string): string => `"${tag}"`).join(', ');
+		return `---\ntags: [${tagsList}]\n---`;
 	}
 }

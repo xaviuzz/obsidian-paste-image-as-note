@@ -81,6 +81,23 @@ Folder configuration functionality is documented in `.claude/stage-three-plan.md
 
 **Result**: Complete folder organization system with automatic folder creation, relative path handling, and professional settings integration.
 
+## Stage Four Plan 🚧 IN PROGRESS
+Optional image preview modal with configuration is documented in `.claude/stage-four-plan.md`
+
+**Goal**: Add optional modal UI before creating image note for preview, naming, and tagging
+- Image preview: Display clipboard image before committing
+- Name editing: Allow users to customize image/note names
+- Tag assignment: Add frontmatter tags to image notes
+- Configuration toggle: Enable/disable modal (default: disabled)
+- Quick workflow: Enter key creates note with current values
+
+**Status**: Planning complete, ready for implementation
+- ⏳ Step 1: Basic Image Preview Modal (View Only)
+- ⏳ Step 2: Editable Image Name
+- ⏳ Step 3: Add Tags to Image Note
+
+**Approach**: Feature-driven increments where each step delivers a complete, usable feature.
+
 # Implementation Methodology
 
 ## Execution Control
@@ -625,6 +642,49 @@ if (!this.hasImage()) {
   this.notifyNoImage();
   return;
 }
+```
+
+## Single Return Point Pattern
+MUST use single return point with collecting variable pattern instead of multiple return statements.
+- Initialize result variable with appropriate default value
+- Apply conditional logic to modify the collecting variable
+- Return the variable exactly once at the end of the function
+- When refactoring, analyze and communicate cyclomatic complexity impact (before/after metrics)
+- Look for opportunities to reduce complexity by consolidating redundant branches
+
+Example:
+```typescript
+❌ AVOID: Multiple return points
+private getRelativeImagePath(imagePath: string): string {
+  if (!noteFolder && !imageFolder) {
+    return imagePath;
+  }
+  if (!noteFolder && imageFolder) {
+    return imagePath;
+  }
+  if (noteFolder && !imageFolder) {
+    return `../${imagePath}`;
+  }
+  if (noteFolder === imageFolder) {
+    return imagePath.split('/').pop() || imagePath;
+  }
+  return `../${imagePath}`;
+}
+// Cyclomatic complexity: 5
+
+✅ USE: Single return point with collecting variable
+private getRelativeImagePath(imagePath: string): string {
+  let relativePath: string = imagePath;
+
+  if (noteFolder && noteFolder === imageFolder) {
+    relativePath = imagePath.split('/').pop() || imagePath;
+  } else if (noteFolder) {
+    relativePath = `../${imagePath}`;
+  }
+
+  return relativePath;
+}
+// Cyclomatic complexity: 2 (reduced from 5)
 ```
 
 ## String Literal Constants

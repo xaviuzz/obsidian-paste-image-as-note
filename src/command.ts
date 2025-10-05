@@ -61,13 +61,24 @@ export class Command {
 		const imageBuffer: Buffer = this.readImage();
 		const modal: ImagePreviewModal = new ImagePreviewModal(this.app, imageBuffer);
 		modal.open();
-		await modal.waitForClose();
-		this.createNoteFromBuffer(imageBuffer);
+		const customName: string = await modal.waitForClose();
+		this.createNoteFromBufferWithName(imageBuffer, customName);
 	}
 
 	private createNoteFromBuffer(imageBuffer: Buffer): void {
 		const filename: string = this.saveImage(imageBuffer);
 		const noteTitle: string = this.createNoteInVault(filename);
+
+		if (this.isNoteBeingEdited()) {
+			this.insertNoteLinkAtCursor(noteTitle);
+		}
+
+		this.notifySuccess();
+	}
+
+	private createNoteFromBufferWithName(imageBuffer: Buffer, customName: string): void {
+		const filename: string = this.saveImageWithName(imageBuffer, customName);
+		const noteTitle: string = this.createNoteInVaultWithName(filename, customName);
 
 		if (this.isNoteBeingEdited()) {
 			this.insertNoteLinkAtCursor(noteTitle);
@@ -93,8 +104,16 @@ export class Command {
 		return this.vaultService.saveImage(imageBuffer);
 	}
 
+	private saveImageWithName(imageBuffer: Buffer, customName: string): string {
+		return this.vaultService.saveImage(imageBuffer, customName);
+	}
+
 	private createNoteInVault(filename: string): string {
 		return this.vaultService.createNote(filename);
+	}
+
+	private createNoteInVaultWithName(filename: string, customName: string): string {
+		return this.vaultService.createNote(filename, customName);
 	}
 
 	private notifySuccess(): void {

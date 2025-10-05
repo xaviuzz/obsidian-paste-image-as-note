@@ -19,8 +19,10 @@ export class VaultService {
 		this.settings = settings;
 	}
 
-	saveImage(imageBuffer: Buffer): string {
-		const filename = `${this.imagePrefix}${Date.now()}${this.imageExtension}`;
+	saveImage(imageBuffer: Buffer, customName?: string): string {
+		const filename: string = customName 
+			? `${customName}${this.imageExtension}` 
+			: `${this.imagePrefix}${Date.now()}${this.imageExtension}`;
 		const imagePath: string = this.getImagePath(filename);
 		
 		this.ensureFolderExists(this.settings.imageFolder);
@@ -35,8 +37,10 @@ export class VaultService {
 		this.app.vault.createBinary(imagePath, arrayBuffer);
 	}
 
-	createNote(imagePath: string): string {
-		const noteFilename = `${this.notePrefix}${Date.now()}${this.noteExtension}`;
+	createNote(imagePath: string, customName?: string): string {
+		const noteFilename: string = customName 
+			? `${customName}${this.noteExtension}` 
+			: `${this.notePrefix}${Date.now()}${this.noteExtension}`;
 		const notePath: string = this.getNotePath(noteFilename);
 		const noteContent = `${this.markdownImagePrefix}${this.getRelativeImagePath(imagePath, notePath)}${this.markdownImageSuffix}`;
 		

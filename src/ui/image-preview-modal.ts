@@ -11,11 +11,13 @@ export class ImagePreviewModal extends Modal {
 	private resolvePromise: ((result: ModalResult) => void) | null = null;
 	private nameInput: HTMLInputElement | null = null;
 	private tagsInput: HTMLInputElement | null = null;
-	private tagsChipContainer: HTMLDivElement | null = null;
+	private tagsInputContainer: HTMLDivElement | null = null;
 	private tagSuggestionsContainer: HTMLDivElement | null = null;
 	private selectedTags: string[] = [];
 	private cancelled: boolean = true;
 	private allVaultTags: string[] = [];
+	private currentSuggestions: string[] = [];
+	private selectedSuggestionIndex: number = -1;
 
 	private readonly defaultPrefix = 'pasted-image-';
 
@@ -70,29 +72,43 @@ export class ImagePreviewModal extends Modal {
 		tagsLabel.style.display = 'block';
 		tagsLabel.style.marginBottom = '5px';
 
-		this.tagsChipContainer = tagsContainer.createDiv();
-		this.tagsChipContainer.style.display = 'flex';
-		this.tagsChipContainer.style.flexWrap = 'wrap';
-		this.tagsChipContainer.style.gap = '6px';
-		this.tagsChipContainer.style.marginBottom = '8px';
-		this.tagsChipContainer.style.minHeight = '32px';
-		this.tagsChipContainer.style.padding = '4px';
-		this.tagsChipContainer.style.border = '1px solid var(--background-modifier-border)';
-		this.tagsChipContainer.style.borderRadius = '4px';
-		this.tagsChipContainer.style.background = 'var(--background-primary)';
+		this.tagsInputContainer = tagsContainer.createDiv();
+		this.tagsInputContainer.style.display = 'flex';
+		this.tagsInputContainer.style.flexWrap = 'wrap';
+		this.tagsInputContainer.style.gap = '6px';
+		this.tagsInputContainer.style.padding = '6px 8px';
+		this.tagsInputContainer.style.border = '1px solid var(--background-modifier-border)';
+		this.tagsInputContainer.style.borderRadius = '4px';
+		this.tagsInputContainer.style.background = 'var(--background-primary)';
+		this.tagsInputContainer.style.marginBottom = '10px';
+		this.tagsInputContainer.style.position = 'relative';
+		this.tagsInputContainer.style.minHeight = '36px';
+		this.tagsInputContainer.style.alignItems = 'center';
 
-		const tagInputWrapper: HTMLDivElement = tagsContainer.createDiv();
-		tagInputWrapper.style.position = 'relative';
-
-		this.tagsInput = tagInputWrapper.createEl('input');
+		this.tagsInput = this.tagsInputContainer.createEl('input');
 		this.tagsInput.type = 'text';
-		this.tagsInput.placeholder = 'Type to search tags...';
-		this.tagsInput.style.width = '100%';
-		this.tagsInput.style.padding = '8px';
-		this.tagsInput.style.marginBottom = '10px';
+		this.tagsInput.placeholder = 'Add more tags...';
+		this.tagsInput.style.border = 'none';
+		this.tagsInput.style.outline = 'none';
+		this.tagsInput.style.padding = '0 4px';
+		this.tagsInput.style.flex = '1 1 auto';
+		this.tagsInput.style.minWidth = '80px';
+		this.tagsInput.style.background = 'transparent';
+		this.tagsInput.style.font = 'inherit';
+		this.tagsInput.style.color = 'inherit';
+		this.tagsInput.style.height = 'auto';
+		this.tagsInput.style.lineHeight = 'inherit';
 
-		this.tagSuggestionsContainer = tagInputWrapper.createDiv();
+		this.tagSuggestionsContainer = this.tagsInputContainer.createDiv();
 		this.tagSuggestionsContainer.style.display = 'none';
+		this.tagSuggestionsContainer.style.position = 'fixed';
+		this.tagSuggestionsContainer.style.maxHeight = '224px';
+		this.tagSuggestionsContainer.style.overflowY = 'auto';
+		this.tagSuggestionsContainer.style.background = 'var(--background-primary)';
+		this.tagSuggestionsContainer.style.border = '1px solid var(--background-modifier-border)';
+		this.tagSuggestionsContainer.style.borderRadius = '4px';
+		this.tagSuggestionsContainer.style.zIndex = '10000';
+		this.tagSuggestionsContainer.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
 
 		this.tagsInput.addEventListener('input', () => {
 			this.updateTagSuggestions();
@@ -106,7 +122,9 @@ export class ImagePreviewModal extends Modal {
 
 		this.scope.register([], 'Enter', () => {
 			if (document.activeElement === this.tagsInput) {
-				if (this.tagsInput && this.tagsInput.value.trim()) {
+				if (this.selectedSuggestionIndex >= 0) {
+					this.selectCurrentSuggestion();
+				} else if (this.tagsInput && this.tagsInput.value.trim()) {
 					this.addTag(this.tagsInput.value.trim());
 					this.tagsInput.value = '';
 					this.hideSuggestions();
@@ -116,6 +134,32 @@ export class ImagePreviewModal extends Modal {
 
 			this.submit();
 			return false;
+		});
+
+		this.scope.register([], 'ArrowDown', () => {
+			if (document.activeElement === this.tagsInput && this.currentSuggestions.length > 0) {
+				const nextIndex = this.selectedSuggestionIndex + 1;
+				if (nextIndex < this.currentSuggestions.length) {
+					this.selectSuggestion(nextIndex);
+				} else {
+					this.selectSuggestion(0);
+				}
+				return false;
+			}
+			return true;
+		});
+
+		this.scope.register([], 'ArrowUp', () => {
+			if (document.activeElement === this.tagsInput && this.currentSuggestions.length > 0) {
+				const previousIndex = this.selectedSuggestionIndex - 1;
+				if (previousIndex >= 0) {
+					this.selectSuggestion(previousIndex);
+				} else {
+					this.selectSuggestion(this.currentSuggestions.length - 1);
+				}
+				return false;
+			}
+			return true;
 		});
 
 		this.nameInput.focus();
@@ -205,14 +249,16 @@ export class ImagePreviewModal extends Modal {
 	}
 
 	private renderTagChips(): void {
-		if (!this.tagsChipContainer) {
+		if (!this.tagsInputContainer || !this.tagsInput) {
 			return;
 		}
 
-		this.tagsChipContainer.empty();
+		const existingChips = this.tagsInputContainer.querySelectorAll('[data-tag-chip]');
+		existingChips.forEach((chip) => chip.remove());
 
 		this.selectedTags.forEach((tag: string) => {
-			const chip: HTMLDivElement = this.tagsChipContainer!.createDiv();
+			const chip: HTMLDivElement = this.tagsInputContainer!.createDiv();
+			chip.setAttribute('data-tag-chip', 'true');
 			chip.style.display = 'inline-flex';
 			chip.style.alignItems = 'center';
 			chip.style.gap = '4px';
@@ -232,6 +278,8 @@ export class ImagePreviewModal extends Modal {
 			removeBtn.addEventListener('click', () => {
 				this.removeTag(tag);
 			});
+
+			this.tagsInputContainer!.insertBefore(chip, this.tagsInput);
 		});
 	}
 
@@ -251,39 +299,34 @@ export class ImagePreviewModal extends Modal {
 			.filter((tag: string): boolean =>
 				tag.toLowerCase().includes(query) && !this.selectedTags.includes(tag)
 			)
-			.slice(0, 10);
+			.slice(0, 7);
 
 		if (matches.length === 0) {
 			this.hideSuggestions();
 			return;
 		}
 
+		this.currentSuggestions = matches;
+		this.selectedSuggestionIndex = -1;
+
 		this.tagSuggestionsContainer.empty();
 		this.tagSuggestionsContainer.style.display = 'block';
-		this.tagSuggestionsContainer.style.position = 'absolute';
-		this.tagSuggestionsContainer.style.top = '0px';
-		this.tagSuggestionsContainer.style.left = '0';
-		this.tagSuggestionsContainer.style.right = '0';
-		this.tagSuggestionsContainer.style.background = 'var(--background-primary)';
-		this.tagSuggestionsContainer.style.border = '1px solid var(--background-modifier-border)';
-		this.tagSuggestionsContainer.style.borderRadius = '4px';
-		this.tagSuggestionsContainer.style.maxHeight = '200px';
-		this.tagSuggestionsContainer.style.overflowY = 'auto';
-		this.tagSuggestionsContainer.style.zIndex = '1000';
-		this.tagSuggestionsContainer.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
 
-		matches.forEach((tag: string) => {
+		const inputRect = this.tagsInput.getBoundingClientRect();
+		this.tagSuggestionsContainer.style.top = `${inputRect.bottom + 4}px`;
+		this.tagSuggestionsContainer.style.left = `${inputRect.left}px`;
+		this.tagSuggestionsContainer.style.width = `${inputRect.width}px`;
+
+		matches.forEach((tag: string, index: number) => {
 			const suggestion: HTMLDivElement = this.tagSuggestionsContainer!.createDiv();
+			suggestion.setAttribute('data-tag-index', index.toString());
 			suggestion.style.padding = '8px 12px';
 			suggestion.style.cursor = 'pointer';
+			suggestion.style.background = 'var(--background-primary)';
 			suggestion.textContent = tag;
 
 			suggestion.addEventListener('mouseenter', () => {
-				suggestion.style.background = 'var(--background-modifier-hover)';
-			});
-
-			suggestion.addEventListener('mouseleave', () => {
-				suggestion.style.background = '';
+				this.selectSuggestion(index);
 			});
 
 			suggestion.addEventListener('click', () => {
@@ -294,6 +337,42 @@ export class ImagePreviewModal extends Modal {
 				this.hideSuggestions();
 			});
 		});
+	}
+
+	private selectSuggestion(index: number): void {
+		if (!this.tagSuggestionsContainer) {
+			return;
+		}
+
+		const previousSelected = this.tagSuggestionsContainer.querySelector('[data-selected="true"]');
+		if (previousSelected) {
+			previousSelected.setAttribute('data-selected', 'false');
+			(previousSelected as HTMLDivElement).style.background = 'var(--background-primary)';
+		}
+
+		this.selectedSuggestionIndex = index;
+		const suggestion = this.tagSuggestionsContainer.querySelector(
+			`[data-tag-index="${index}"]`
+		) as HTMLDivElement;
+		if (suggestion) {
+			suggestion.setAttribute('data-selected', 'true');
+			suggestion.style.background = 'var(--background-modifier-hover)';
+			suggestion.scrollIntoView({ block: 'nearest' });
+		}
+	}
+
+	private selectCurrentSuggestion(): void {
+		if (
+			this.selectedSuggestionIndex >= 0 &&
+			this.selectedSuggestionIndex < this.currentSuggestions.length
+		) {
+			const tag: string = this.currentSuggestions[this.selectedSuggestionIndex];
+			this.addTag(tag);
+			if (this.tagsInput) {
+				this.tagsInput.value = '';
+			}
+			this.hideSuggestions();
+		}
 	}
 
 	private hideSuggestions(): void {

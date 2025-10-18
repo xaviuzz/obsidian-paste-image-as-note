@@ -309,7 +309,9 @@ class FakeSettings implements Settings {
 	imageFolder: string = '';
 	imageNotesFolder: string = '';
 	showPreviewModal: boolean = false;
+	includeAssetProperty: boolean = false;
 }
+
 
 class FakeApp {
 	modalOpened: boolean = false;

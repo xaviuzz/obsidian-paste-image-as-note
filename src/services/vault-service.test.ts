@@ -12,8 +12,10 @@ describe('VaultService', () => {
 		settings = {
 			imageFolder: '',
 			imageNotesFolder: '',
-			showPreviewModal: false
+			showPreviewModal: false,
+			includeAssetProperty: false
 		};
+
 		service = new VaultService(app as any, settings);
 	});
 
@@ -243,7 +245,107 @@ describe('VaultService', () => {
 			expect(note?.content).toContain('tags: ["tag1", "tag2", "tag3", "tag4"]');
 		});
 	});
+
+	describe('asset property frontmatter behavior', () => {
+		it('creates note without asset property when setting disabled', () => {
+			settings.includeAssetProperty = false;
+			const imagePath = 'test-image.png';
+
+			service.createNote(imagePath);
+
+			const files: VaultFile[] = Array.from((app.vault as any).files.values());
+			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
+				f.path.includes('.md')
+			);
+			expect(note).toBeDefined();
+			expect(note?.content).toBe('![](test-image.png)');
+			expect(note?.content).not.toContain('asset:');
+		});
+
+		it('creates note with asset property when setting enabled', () => {
+			settings.includeAssetProperty = true;
+			const imagePath = 'test-image.png';
+
+			service.createNote(imagePath);
+
+			const files: VaultFile[] = Array.from((app.vault as any).files.values());
+			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
+				f.path.includes('.md')
+			);
+			expect(note).toBeDefined();
+			expect(note?.content).toContain('---');
+			expect(note?.content).toContain('asset: "[[test-image.png]]"');
+		});
+
+		it('creates note with asset property using relative path when folders configured', () => {
+			settings.includeAssetProperty = true;
+			settings.imageFolder = 'images';
+			settings.imageNotesFolder = 'notes';
+			const imagePath = 'images/test-image.png';
+
+			service.createNote(imagePath);
+
+			const files: VaultFile[] = Array.from((app.vault as any).files.values());
+			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
+				f.path.includes('.md')
+			);
+			expect(note).toBeDefined();
+			expect(note?.content).toContain('asset: "[[../images/test-image.png]]"');
+		});
+
+		it('creates note with both asset property and tags when both enabled', () => {
+			settings.includeAssetProperty = true;
+			const imagePath = 'test-image.png';
+			const tags: string[] = ['screenshot', 'work'];
+
+			service.createNote(imagePath, undefined, tags);
+
+			const files: VaultFile[] = Array.from((app.vault as any).files.values());
+			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
+				f.path.includes('.md')
+			);
+			expect(note).toBeDefined();
+			expect(note?.content).toContain('---');
+			expect(note?.content).toContain('asset: "[[test-image.png]]"');
+			expect(note?.content).toContain('tags: ["screenshot", "work"]');
+		});
+
+		it('places asset property before tags in frontmatter', () => {
+			settings.includeAssetProperty = true;
+			const imagePath = 'test-image.png';
+			const tags: string[] = ['test'];
+
+			service.createNote(imagePath, undefined, tags);
+
+			const files: VaultFile[] = Array.from((app.vault as any).files.values());
+			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
+				f.path.includes('.md')
+			);
+			expect(note).toBeDefined();
+			const content: string = note?.content as string;
+			const assetIndex: number = content.indexOf('asset:');
+			const tagsIndex: number = content.indexOf('tags:');
+			expect(assetIndex).toBeLessThan(tagsIndex);
+		});
+
+		it('creates note with only asset property when tags empty', () => {
+			settings.includeAssetProperty = true;
+			const imagePath = 'test-image.png';
+
+			service.createNote(imagePath, undefined, []);
+
+			const files: VaultFile[] = Array.from((app.vault as any).files.values());
+			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
+				f.path.includes('.md')
+			);
+			expect(note).toBeDefined();
+			expect(note?.content).toContain('---');
+			expect(note?.content).toContain('asset: "[[test-image.png]]"');
+			expect(note?.content).not.toContain('tags:');
+		});
+	});
 });
+
 
 interface VaultFile {
 	path: string;

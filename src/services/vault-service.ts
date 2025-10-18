@@ -42,8 +42,10 @@ export class VaultService {
 			? `${customName}${this.noteExtension}`
 			: `${this.notePrefix}${Date.now()}${this.noteExtension}`;
 		const notePath: string = this.getNotePath(noteFilename);
-		const frontmatter: string = this.generateFrontmatter(tags);
-		const imageMarkdown: string = `${this.markdownImagePrefix}${this.getRelativeImagePath(imagePath, notePath)}${this.markdownImageSuffix}`;
+		const relativeImagePath: string = this.getRelativeImagePath(imagePath, notePath);
+		const assetLink: string | undefined = this.settings.includeAssetProperty ? relativeImagePath : undefined;
+		const frontmatter: string = this.generateFrontmatter(tags, assetLink);
+		const imageMarkdown: string = `${this.markdownImagePrefix}${relativeImagePath}${this.markdownImageSuffix}`;
 		const noteContent: string = frontmatter ? `${frontmatter}\n${imageMarkdown}` : imageMarkdown;
 
 		this.ensureFolderExists(this.settings.imageNotesFolder);
@@ -51,6 +53,7 @@ export class VaultService {
 		this.app.vault.create(notePath, noteContent);
 		return noteFilename;
 	}
+
 
 	private getImagePath(filename: string): string {
 		if (this.settings.imageFolder) {
@@ -87,12 +90,29 @@ export class VaultService {
 		}
 	}
 
-	private generateFrontmatter(tags?: string[]): string {
-		if (!tags || tags.length === 0) {
+	private generateFrontmatter(tags?: string[], assetLink?: string): string {
+		const hasTags: boolean = tags !== undefined && tags.length > 0;
+		const hasAsset: boolean = assetLink !== undefined;
+
+		if (!hasTags && !hasAsset) {
 			return '';
 		}
 
-		const tagsList: string = tags.map((tag: string): string => `"${tag}"`).join(', ');
-		return `---\ntags: [${tagsList}]\n---`;
+		let frontmatterContent: string = '---\n';
+
+		if (hasAsset) {
+			frontmatterContent += `asset: "[[${assetLink}]]"\n`;
+		}
+
+		if (hasTags && tags) {
+			const tagsList: string = tags.map((tag: string): string => `"${tag}"`).join(', ');
+			frontmatterContent += `tags: [${tagsList}]\n`;
+		}
+
+
+		frontmatterContent += '---';
+
+		return frontmatterContent;
 	}
+
 }

@@ -85,6 +85,26 @@ describe('NameInput', () => {
 			expect(name1).not.toEqual(name2);
 			document.body.removeChild(container2);
 		});
+
+		it('pre-fills input with initialValue when provided', () => {
+			const initialValue = 'my-custom-filename';
+
+			const input: HTMLInputElement = nameInput.render(container, initialValue);
+
+			expect(input.value).toBe('my-custom-filename');
+		});
+
+		it('uses default timestamp name when initialValue not provided', () => {
+			const input: HTMLInputElement = nameInput.render(container);
+
+			expect(input.value).toMatch(/^pasted-image-\d+$/);
+		});
+
+		it('uses default timestamp name when initialValue is empty string', () => {
+			const input: HTMLInputElement = nameInput.render(container, '');
+
+			expect(input.value).toMatch(/^pasted-image-\d+$/);
+		});
 	});
 
 	describe('getValue behavior', () => {

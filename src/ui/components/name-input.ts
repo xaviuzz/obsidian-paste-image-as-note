@@ -1,8 +1,11 @@
 export class NameInput {
 	private readonly defaultPrefix = 'pasted-image-';
 	private input: HTMLInputElement | null = null;
+	private initialValue: string = '';
 
-	render(container: HTMLElement): HTMLInputElement {
+	render(container: HTMLElement, initialValue?: string): HTMLInputElement {
+		this.initialValue = initialValue || '';
+
 		const nameContainer: HTMLDivElement = container.createDiv();
 		nameContainer.style.marginTop = '20px';
 
@@ -14,7 +17,7 @@ export class NameInput {
 
 		this.input = nameContainer.createEl('input');
 		this.input.type = 'text';
-		this.input.value = this.generateDefaultName();
+		this.input.value = this.getInitialValue();
 		this.input.style.width = '100%';
 		this.input.style.padding = '8px';
 		this.input.style.marginBottom = '10px';
@@ -25,6 +28,13 @@ export class NameInput {
 	getValue(): string {
 		if (this.input && this.input.value.trim()) {
 			return this.input.value.trim().replace(/ /g, '_');
+		}
+		return this.generateDefaultName();
+	}
+
+	private getInitialValue(): string {
+		if (this.initialValue) {
+			return this.initialValue;
 		}
 		return this.generateDefaultName();
 	}

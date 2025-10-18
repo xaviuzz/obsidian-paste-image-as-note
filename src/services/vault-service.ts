@@ -54,6 +54,9 @@ export class VaultService {
 		return noteFilename;
 	}
 
+	createNoteFromExistingFile(existingImagePath: string, customName?: string, tags?: string[]): string {
+		return this.createNote(existingImagePath, customName, tags);
+	}
 
 	private getImagePath(filename: string): string {
 		if (this.settings.imageFolder) {

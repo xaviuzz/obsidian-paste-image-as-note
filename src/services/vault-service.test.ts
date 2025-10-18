@@ -344,6 +344,64 @@ describe('VaultService', () => {
 			expect(note?.content).not.toContain('tags:');
 		});
 	});
+
+	describe('createNoteFromExistingFile behavior', () => {
+		it('creates note with reference to existing image file', () => {
+			const existingImagePath = 'assets/photo.png';
+
+			service.createNoteFromExistingFile(existingImagePath);
+
+			const files: VaultFile[] = Array.from((app.vault as any).files.values());
+			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
+				f.path.includes('.md')
+			);
+			expect(note).toBeDefined();
+			expect(note?.content).toContain('![](assets/photo.png)');
+		});
+
+		it('creates note with custom name for existing file', () => {
+			const existingImagePath = 'images/screenshot.png';
+			const customName = 'my-custom-note';
+
+			const noteFilename: string = service.createNoteFromExistingFile(existingImagePath, customName);
+
+			expect(noteFilename).toBe('my-custom-note.md');
+			const files: VaultFile[] = Array.from((app.vault as any).files.values());
+			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
+				f.path === 'my-custom-note.md'
+			);
+			expect(note).toBeDefined();
+		});
+
+		it('creates note with tags for existing file', () => {
+			const existingImagePath = 'photo.png';
+			const tags: string[] = ['imported', 'context-menu'];
+
+			service.createNoteFromExistingFile(existingImagePath, undefined, tags);
+
+			const files: VaultFile[] = Array.from((app.vault as any).files.values());
+			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
+				f.path.includes('.md')
+			);
+			expect(note).toBeDefined();
+			expect(note?.content).toContain('tags: ["imported", "context-menu"]');
+		});
+
+		it('respects folder configuration when creating note from existing file', () => {
+			settings.imageFolder = 'images';
+			settings.imageNotesFolder = 'notes';
+			const existingImagePath = 'images/photo.png';
+
+			service.createNoteFromExistingFile(existingImagePath);
+
+			const files: VaultFile[] = Array.from((app.vault as any).files.values());
+			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
+				f.path.startsWith('notes/')
+			);
+			expect(note).toBeDefined();
+			expect(note?.content).toContain('![](../images/photo.png)');
+		});
+	});
 });
 
 

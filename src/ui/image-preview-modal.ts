@@ -12,6 +12,7 @@ export interface ModalResult {
 
 export class ImagePreviewModal extends Modal {
 	private imageBuffer: Buffer;
+	private initialName: string;
 	private resolvePromise: ((result: ModalResult) => void) | null = null;
 	private cancelled: boolean = true;
 
@@ -20,9 +21,10 @@ export class ImagePreviewModal extends Modal {
 	private tagInput: TagInput;
 	private tagProvider: TagProvider;
 
-	constructor(app: App, imageBuffer: Buffer) {
+	constructor(app: App, imageBuffer: Buffer, initialName?: string) {
 		super(app);
 		this.imageBuffer = imageBuffer;
+		this.initialName = initialName || '';
 		this.tagProvider = new TagProvider(app);
 		this.imagePreview = new ImagePreview();
 		this.nameInput = new NameInput();
@@ -37,7 +39,7 @@ export class ImagePreviewModal extends Modal {
 
 		this.imagePreview.render(contentEl, this.imageBuffer);
 
-		const nameInputElement = this.nameInput.render(contentEl);
+		const nameInputElement = this.nameInput.render(contentEl, this.initialName);
 		const tagInputElement = this.tagInput.render(contentEl);
 		const suggestionsElement = this.tagInput.getSuggestions();
 

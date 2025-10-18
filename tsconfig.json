@@ -11,6 +11,7 @@
     "importHelpers": true,
     "isolatedModules": true,
     "strictNullChecks": true,
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
     "lib": [
       "DOM",
       "ES5",

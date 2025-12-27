@@ -49,9 +49,14 @@ export class VaultService {
 		let noteContent: string = '';
 
 		if (this.settings.templateFile) {
-			const templateContent: string = await this.readTemplateContent(this.settings.templateFile);
-			const mergedContent: string = this.mergeTemplateWithProperties(templateContent, tags, assetLink);
-			noteContent = `${mergedContent}\n${imageMarkdown}`;
+			try {
+				const templateContent: string = await this.readTemplateContent(this.settings.templateFile);
+				const mergedContent: string = this.mergeTemplateWithProperties(templateContent, tags, assetLink);
+				noteContent = `${mergedContent}\n${imageMarkdown}`;
+			} catch (error: unknown) {
+				const frontmatter: string = this.generateFrontmatter(tags, assetLink);
+				noteContent = frontmatter ? `${frontmatter}\n${imageMarkdown}` : imageMarkdown;
+			}
 		} else {
 			const frontmatter: string = this.generateFrontmatter(tags, assetLink);
 			noteContent = frontmatter ? `${frontmatter}\n${imageMarkdown}` : imageMarkdown;

@@ -61,19 +61,19 @@ describe('Command', () => {
 	});
 
 	describe('no image in clipboard workflow', () => {
-		it('notifies user when no image available', () => {
+		it('notifies user when no image available', async () => {
 			clipboardService.imageAvailable = false;
 
-			command.execute();
+			await command.execute();
 
 			expect(notificationService.noImageCalled).toBe(true);
 			expect(notificationService.successCalled).toBe(false);
 		});
 
-		it('does not create note when no image available', () => {
+		it('does not create note when no image available', async () => {
 			clipboardService.imageAvailable = false;
 
-			command.execute();
+			await command.execute();
 
 			expect(vaultService.imageSaved).toBe(false);
 			expect(vaultService.noteCreated).toBe(false);
@@ -81,11 +81,11 @@ describe('Command', () => {
 	});
 
 	describe('image paste with editing workflow', () => {
-		it('creates note and inserts link when editing', () => {
+		it('creates note and inserts link when editing', async () => {
 			clipboardService.imageAvailable = true;
 			editorService.editing = true;
 
-			command.execute();
+			await command.execute();
 
 			expect(vaultService.imageSaved).toBe(true);
 			expect(vaultService.noteCreated).toBe(true);
@@ -93,32 +93,32 @@ describe('Command', () => {
 			expect(notificationService.successCalled).toBe(true);
 		});
 
-		it('inserts link without file extension', () => {
+		it('inserts link without file extension', async () => {
 			clipboardService.imageAvailable = true;
 			editorService.editing = true;
 			vaultService.noteTitle = 'Image Note 123.md';
 
-			command.execute();
+			await command.execute();
 
 			expect(editorService.insertedText).toBe('![[Image Note 123]]');
 		});
 
-		it('creates image before note', () => {
+		it('creates image before note', async () => {
 			clipboardService.imageAvailable = true;
 			editorService.editing = true;
 
-			command.execute();
+			await command.execute();
 
 			expect(vaultService.imageSaveOrder).toBeLessThan(vaultService.noteCreateOrder);
 		});
 	});
 
 	describe('image paste without editing workflow', () => {
-		it('creates note without inserting link when not editing', () => {
+		it('creates note without inserting link when not editing', async () => {
 			clipboardService.imageAvailable = true;
 			editorService.editing = false;
 
-			command.execute();
+			await command.execute();
 
 			expect(vaultService.imageSaved).toBe(true);
 			expect(vaultService.noteCreated).toBe(true);
@@ -128,50 +128,50 @@ describe('Command', () => {
 	});
 
 	describe('service orchestration', () => {
-		it('reads image from clipboard service', () => {
+		it('reads image from clipboard service', async () => {
 			clipboardService.imageAvailable = true;
 
-			command.execute();
+			await command.execute();
 
 			expect(clipboardService.imageRead).toBe(true);
 		});
 
-		it('saves image with buffer from clipboard', () => {
+		it('saves image with buffer from clipboard', async () => {
 			clipboardService.imageAvailable = true;
 			clipboardService.imageData = Buffer.from('test-image-data');
 
-			command.execute();
+			await command.execute();
 
 			expect(vaultService.savedImageBuffer?.toString()).toBe('test-image-data');
 		});
 
-		it('creates note with image path from vault', () => {
+		it('creates note with image path from vault', async () => {
 			clipboardService.imageAvailable = true;
 			vaultService.imagePath = 'images/test.png';
 
-			command.execute();
+			await command.execute();
 
 			expect(vaultService.noteImagePath).toBe('images/test.png');
 		});
 	});
 
 	describe('preview modal workflow', () => {
-		it('creates note immediately when preview disabled', () => {
+		it('creates note immediately when preview disabled', async () => {
 			clipboardService.imageAvailable = true;
 			settings.showPreviewModal = false;
 
-			command.execute();
+			await command.execute();
 
 			expect(vaultService.imageSaved).toBe(true);
 			expect(vaultService.noteCreated).toBe(true);
 			expect(notificationService.successCalled).toBe(true);
 		});
 
-		it('does not show modal when preview disabled', () => {
+		it('does not show modal when preview disabled', async () => {
 			clipboardService.imageAvailable = true;
 			settings.showPreviewModal = false;
 
-			command.execute();
+			await command.execute();
 
 			expect(app.modalOpened).toBe(false);
 		});
@@ -264,7 +264,7 @@ class FakeVaultService {
 		return this.imagePath;
 	}
 
-	createNote(imagePath: string): string {
+	async createNote(imagePath: string): Promise<string> {
 		this.noteCreated = true;
 		this.noteImagePath = imagePath;
 		this.noteCreateOrder = ++this.operationCounter;
@@ -310,6 +310,7 @@ class FakeSettings implements Settings {
 	imageNotesFolder: string = '';
 	showPreviewModal: boolean = false;
 	includeAssetProperty: boolean = false;
+	templateFile: string = '';
 }
 
 

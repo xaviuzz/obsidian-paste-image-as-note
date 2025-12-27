@@ -14,6 +14,7 @@ export default class PasteImagePlugin extends Plugin {
 	private fileContextCommand: FileContextCommand;
 	private fileService: FileService;
 	settings: Settings;
+	vaultService: VaultService;
 
 	async onload() {
 		await this.loadSettings();
@@ -35,14 +36,14 @@ export default class PasteImagePlugin extends Plugin {
 	}
 
 	private initializeServices() {
-		const vaultService: VaultService = new VaultService(this.app, this.settings);
+		this.vaultService = new VaultService(this.app, this.settings);
 		const notificationService: NotificationService = new NotificationService();
 		const editorService: EditorService = new EditorService(this.app);
 
 		const commandDependencies: CommandDependencies = {
 			app: this.app,
 			clipboardService: new ClipboardService(),
-			vaultService: vaultService,
+			vaultService: this.vaultService,
 			notificationService: notificationService,
 			editorService: editorService,
 			settings: this.settings
@@ -50,7 +51,7 @@ export default class PasteImagePlugin extends Plugin {
 
 		const fileContextDependencies: FileContextCommandDependencies = {
 			app: this.app,
-			vaultService: vaultService,
+			vaultService: this.vaultService,
 			notificationService: notificationService,
 			editorService: editorService,
 			settings: this.settings

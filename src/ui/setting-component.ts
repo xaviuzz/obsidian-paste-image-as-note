@@ -9,5 +9,5 @@ export abstract class SettingComponent {
 		this.containerEl = containerEl;
 	}
 
-	abstract render(): void;
+	abstract render(): void | Promise<void>;
 }

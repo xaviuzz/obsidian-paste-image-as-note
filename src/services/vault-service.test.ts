@@ -13,14 +13,15 @@ describe('VaultService', () => {
 			imageFolder: '',
 			imageNotesFolder: '',
 			showPreviewModal: false,
-			includeAssetProperty: false
+			includeAssetProperty: false,
+			templateFile: ''
 		};
 
 		service = new VaultService(app as any, settings);
 	});
 
 	describe('getImagePath behavior', () => {
-		it('returns filename only when no image folder configured', () => {
+		it('returns filename only when no image folder configured', async () => {
 			settings.imageFolder = '';
 			const imageBuffer: Buffer = Buffer.from('fake-image-data');
 
@@ -29,7 +30,7 @@ describe('VaultService', () => {
 			expect(result).toMatch(/^pasted-image-\d+\.png$/);
 		});
 
-		it('returns folder/filename when image folder configured', () => {
+		it('returns folder/filename when image folder configured', async () => {
 			settings.imageFolder = 'images';
 			const imageBuffer: Buffer = Buffer.from('fake-image-data');
 
@@ -38,7 +39,7 @@ describe('VaultService', () => {
 			expect(result).toMatch(/^images\/pasted-image-\d+\.png$/);
 		});
 
-		it('uses custom name with underscores for image filename', () => {
+		it('uses custom name with underscores for image filename', async () => {
 			const imageBuffer: Buffer = Buffer.from('fake-image-data');
 			const customName = 'my_custom_name';
 
@@ -49,20 +50,20 @@ describe('VaultService', () => {
 	});
 
 	describe('getNotePath behavior', () => {
-		it('returns filename only when no notes folder configured', () => {
+		it('returns filename only when no notes folder configured', async () => {
 			settings.imageNotesFolder = '';
 			const imagePath = 'test-image.png';
 
-			const result: string = service.createNote(imagePath);
+			const result: string = await service.createNote(imagePath);
 
 			expect(result).toMatch(/^Image Note \d+\.md$/);
 		});
 
-		it('returns folder/filename when notes folder configured', () => {
+		it('returns folder/filename when notes folder configured', async () => {
 			settings.imageNotesFolder = 'notes';
 			const imagePath = 'test-image.png';
 
-			const result: string = service.createNote(imagePath);
+			const result: string = await service.createNote(imagePath);
 
 			expect(result).toMatch(/^Image Note \d+\.md$/);
 			const createdPath: string = `notes/${result}`;
@@ -70,23 +71,23 @@ describe('VaultService', () => {
 			expect(content).toBeDefined();
 		});
 
-		it('uses custom name with underscores for note filename', () => {
+		it('uses custom name with underscores for note filename', async () => {
 			const imagePath = 'test-image.png';
 			const customName = 'my_custom_note';
 
-			const result: string = service.createNote(imagePath, customName);
+			const result: string = await service.createNote(imagePath, customName);
 
 			expect(result).toBe('my_custom_note.md');
 		});
 	});
 
 	describe('relative path calculation', () => {
-		it('uses image path as-is when no folders configured', () => {
+		it('uses image path as-is when no folders configured', async () => {
 			settings.imageFolder = '';
 			settings.imageNotesFolder = '';
 			const imagePath = 'pasted-image-123.png';
 
-			service.createNote(imagePath);
+			await service.createNote(imagePath);
 
 			const noteContent: string | undefined = app.vault.getCreatedContent(imagePath.replace('.png', '.md').replace('pasted-image', 'Image Note '));
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
@@ -97,12 +98,12 @@ describe('VaultService', () => {
 			expect(note?.content).toContain(`![](${imagePath})`);
 		});
 
-		it('uses filename only when both folders are the same', () => {
+		it('uses filename only when both folders are the same', async () => {
 			settings.imageFolder = 'media';
 			settings.imageNotesFolder = 'media';
 			const imagePath = 'media/pasted-image-123.png';
 
-			service.createNote(imagePath);
+			await service.createNote(imagePath);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean => 
@@ -112,12 +113,12 @@ describe('VaultService', () => {
 			expect(note?.content).toContain('![](pasted-image-123.png)');
 		});
 
-		it('uses parent path prefix when note folder exists but differs from image folder', () => {
+		it('uses parent path prefix when note folder exists but differs from image folder', async () => {
 			settings.imageFolder = '';
 			settings.imageNotesFolder = 'notes';
 			const imagePath = 'pasted-image-123.png';
 
-			service.createNote(imagePath);
+			await service.createNote(imagePath);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean => 
@@ -127,12 +128,12 @@ describe('VaultService', () => {
 			expect(note?.content).toContain(`![](../${imagePath})`);
 		});
 
-		it('uses parent path when notes in subfolder and images in different subfolder', () => {
+		it('uses parent path when notes in subfolder and images in different subfolder', async () => {
 			settings.imageFolder = 'images';
 			settings.imageNotesFolder = 'notes';
 			const imagePath = 'images/pasted-image-123.png';
 
-			service.createNote(imagePath);
+			await service.createNote(imagePath);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean => 
@@ -144,7 +145,7 @@ describe('VaultService', () => {
 	});
 
 	describe('folder creation behavior', () => {
-		it('creates image folder when configured and does not exist', () => {
+		it('creates image folder when configured and does not exist', async () => {
 			settings.imageFolder = 'images';
 			const imageBuffer: Buffer = Buffer.from('fake-image-data');
 
@@ -153,16 +154,16 @@ describe('VaultService', () => {
 			expect(app.vault.hasFolder('images')).toBe(true);
 		});
 
-		it('creates notes folder when configured and does not exist', () => {
+		it('creates notes folder when configured and does not exist', async () => {
 			settings.imageNotesFolder = 'notes';
 			const imagePath = 'test-image.png';
 
-			service.createNote(imagePath);
+			await service.createNote(imagePath);
 
 			expect(app.vault.hasFolder('notes')).toBe(true);
 		});
 
-		it('does not create folder when empty string configured', () => {
+		it('does not create folder when empty string configured', async () => {
 			settings.imageFolder = '';
 			const imageBuffer: Buffer = Buffer.from('fake-image-data');
 
@@ -173,10 +174,10 @@ describe('VaultService', () => {
 	});
 
 	describe('tags frontmatter behavior', () => {
-		it('creates note without frontmatter when no tags provided', () => {
+		it('creates note without frontmatter when no tags provided', async () => {
 			const imagePath = 'test-image.png';
 
-			service.createNote(imagePath, undefined, undefined);
+			await service.createNote(imagePath, undefined, undefined);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
@@ -186,10 +187,10 @@ describe('VaultService', () => {
 			expect(note?.content).toBe('![](test-image.png)');
 		});
 
-		it('creates note without frontmatter when empty tags array provided', () => {
+		it('creates note without frontmatter when empty tags array provided', async () => {
 			const imagePath = 'test-image.png';
 
-			service.createNote(imagePath, undefined, []);
+			await service.createNote(imagePath, undefined, []);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
@@ -199,11 +200,11 @@ describe('VaultService', () => {
 			expect(note?.content).toBe('![](test-image.png)');
 		});
 
-		it('creates note with YAML frontmatter when tags provided', () => {
+		it('creates note with YAML frontmatter when tags provided', async () => {
 			const imagePath = 'test-image.png';
 			const tags: string[] = ['screenshot', 'work'];
 
-			service.createNote(imagePath, undefined, tags);
+			await service.createNote(imagePath, undefined, tags);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
@@ -214,11 +215,11 @@ describe('VaultService', () => {
 			expect(note?.content).toContain('tags: ["screenshot", "work"]');
 		});
 
-		it('creates note with frontmatter before image markdown', () => {
+		it('creates note with frontmatter before image markdown', async () => {
 			const imagePath = 'test-image.png';
 			const tags: string[] = ['test'];
 
-			service.createNote(imagePath, undefined, tags);
+			await service.createNote(imagePath, undefined, tags);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
@@ -231,11 +232,11 @@ describe('VaultService', () => {
 			expect(frontmatterIndex).toBeLessThan(imageIndex);
 		});
 
-		it('supports multiple tags in frontmatter', () => {
+		it('supports multiple tags in frontmatter', async () => {
 			const imagePath = 'test-image.png';
 			const tags: string[] = ['tag1', 'tag2', 'tag3', 'tag4'];
 
-			service.createNote(imagePath, undefined, tags);
+			await service.createNote(imagePath, undefined, tags);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
@@ -247,11 +248,11 @@ describe('VaultService', () => {
 	});
 
 	describe('asset property frontmatter behavior', () => {
-		it('creates note without asset property when setting disabled', () => {
+		it('creates note without asset property when setting disabled', async () => {
 			settings.includeAssetProperty = false;
 			const imagePath = 'test-image.png';
 
-			service.createNote(imagePath);
+			await service.createNote(imagePath);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
@@ -262,11 +263,11 @@ describe('VaultService', () => {
 			expect(note?.content).not.toContain('asset:');
 		});
 
-		it('creates note with asset property when setting enabled', () => {
+		it('creates note with asset property when setting enabled', async () => {
 			settings.includeAssetProperty = true;
 			const imagePath = 'test-image.png';
 
-			service.createNote(imagePath);
+			await service.createNote(imagePath);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
@@ -277,13 +278,13 @@ describe('VaultService', () => {
 			expect(note?.content).toContain('asset: "[[test-image.png]]"');
 		});
 
-		it('creates note with asset property using relative path when folders configured', () => {
+		it('creates note with asset property using relative path when folders configured', async () => {
 			settings.includeAssetProperty = true;
 			settings.imageFolder = 'images';
 			settings.imageNotesFolder = 'notes';
 			const imagePath = 'images/test-image.png';
 
-			service.createNote(imagePath);
+			await service.createNote(imagePath);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
@@ -293,12 +294,12 @@ describe('VaultService', () => {
 			expect(note?.content).toContain('asset: "[[../images/test-image.png]]"');
 		});
 
-		it('creates note with both asset property and tags when both enabled', () => {
+		it('creates note with both asset property and tags when both enabled', async () => {
 			settings.includeAssetProperty = true;
 			const imagePath = 'test-image.png';
 			const tags: string[] = ['screenshot', 'work'];
 
-			service.createNote(imagePath, undefined, tags);
+			await service.createNote(imagePath, undefined, tags);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
@@ -310,12 +311,12 @@ describe('VaultService', () => {
 			expect(note?.content).toContain('tags: ["screenshot", "work"]');
 		});
 
-		it('places asset property before tags in frontmatter', () => {
+		it('places asset property before tags in frontmatter', async () => {
 			settings.includeAssetProperty = true;
 			const imagePath = 'test-image.png';
 			const tags: string[] = ['test'];
 
-			service.createNote(imagePath, undefined, tags);
+			await service.createNote(imagePath, undefined, tags);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
@@ -328,11 +329,11 @@ describe('VaultService', () => {
 			expect(assetIndex).toBeLessThan(tagsIndex);
 		});
 
-		it('creates note with only asset property when tags empty', () => {
+		it('creates note with only asset property when tags empty', async () => {
 			settings.includeAssetProperty = true;
 			const imagePath = 'test-image.png';
 
-			service.createNote(imagePath, undefined, []);
+			await service.createNote(imagePath, undefined, []);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
@@ -346,10 +347,10 @@ describe('VaultService', () => {
 	});
 
 	describe('createNoteFromExistingFile behavior', () => {
-		it('creates note with reference to existing image file', () => {
+		it('creates note with reference to existing image file', async () => {
 			const existingImagePath = 'assets/photo.png';
 
-			service.createNoteFromExistingFile(existingImagePath);
+			await service.createNoteFromExistingFile(existingImagePath);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
@@ -359,11 +360,11 @@ describe('VaultService', () => {
 			expect(note?.content).toContain('![](assets/photo.png)');
 		});
 
-		it('creates note with custom name for existing file', () => {
+		it('creates note with custom name for existing file', async () => {
 			const existingImagePath = 'images/screenshot.png';
 			const customName = 'my-custom-note';
 
-			const noteFilename: string = service.createNoteFromExistingFile(existingImagePath, customName);
+			const noteFilename: string = await service.createNoteFromExistingFile(existingImagePath, customName);
 
 			expect(noteFilename).toBe('my-custom-note.md');
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
@@ -373,11 +374,11 @@ describe('VaultService', () => {
 			expect(note).toBeDefined();
 		});
 
-		it('creates note with tags for existing file', () => {
+		it('creates note with tags for existing file', async () => {
 			const existingImagePath = 'photo.png';
 			const tags: string[] = ['imported', 'context-menu'];
 
-			service.createNoteFromExistingFile(existingImagePath, undefined, tags);
+			await service.createNoteFromExistingFile(existingImagePath, undefined, tags);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>
@@ -387,12 +388,12 @@ describe('VaultService', () => {
 			expect(note?.content).toContain('tags: ["imported", "context-menu"]');
 		});
 
-		it('respects folder configuration when creating note from existing file', () => {
+		it('respects folder configuration when creating note from existing file', async () => {
 			settings.imageFolder = 'images';
 			settings.imageNotesFolder = 'notes';
 			const existingImagePath = 'images/photo.png';
 
-			service.createNoteFromExistingFile(existingImagePath);
+			await service.createNoteFromExistingFile(existingImagePath);
 
 			const files: VaultFile[] = Array.from((app.vault as any).files.values());
 			const note: VaultFile | undefined = files.find((f: VaultFile): boolean =>

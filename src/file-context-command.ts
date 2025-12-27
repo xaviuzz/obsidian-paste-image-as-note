@@ -38,7 +38,7 @@ export class FileContextCommand {
 		if (this.settings.showPreviewModal) {
 			await this.showPreviewAndCreateNote(imageBuffer, file);
 		} else {
-			this.createNoteFromFile(file.path);
+			await this.createNoteFromFile(file.path);
 		}
 	}
 
@@ -58,11 +58,11 @@ export class FileContextCommand {
 		}
 
 		const customName: string = result.name || defaultName;
-		this.createNoteFromFileWithNameAndTags(file.path, customName, result.tags);
+		await this.createNoteFromFileWithNameAndTags(file.path, customName, result.tags);
 	}
 
-	private createNoteFromFile(existingImagePath: string): void {
-		const noteTitle: string = this.vaultService.createNoteFromExistingFile(existingImagePath);
+	private async createNoteFromFile(existingImagePath: string): Promise<void> {
+		const noteTitle: string = await this.vaultService.createNoteFromExistingFile(existingImagePath);
 
 		if (this.isNoteBeingEdited()) {
 			this.insertNoteLinkAtCursor(noteTitle);
@@ -71,8 +71,8 @@ export class FileContextCommand {
 		this.notifySuccess();
 	}
 
-	private createNoteFromFileWithNameAndTags(existingImagePath: string, customName: string, tags: string[]): void {
-		const noteTitle: string = this.vaultService.createNoteFromExistingFile(existingImagePath, customName, tags);
+	private async createNoteFromFileWithNameAndTags(existingImagePath: string, customName: string, tags: string[]): Promise<void> {
+		const noteTitle: string = await this.vaultService.createNoteFromExistingFile(existingImagePath, customName, tags);
 
 		if (this.isNoteBeingEdited()) {
 			this.insertNoteLinkAtCursor(noteTitle);

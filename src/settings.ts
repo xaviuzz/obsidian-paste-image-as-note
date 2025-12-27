@@ -3,12 +3,14 @@ export interface Settings {
 	imageNotesFolder: string;
 	showPreviewModal: boolean;
 	includeAssetProperty: boolean;
+	templateFile: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
 	imageFolder: '',
 	imageNotesFolder: '',
 	showPreviewModal: false,
-	includeAssetProperty: false
+	includeAssetProperty: false,
+	templateFile: ''
 };
 

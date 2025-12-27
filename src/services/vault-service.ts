@@ -1,4 +1,4 @@
-import { App } from 'obsidian';
+import { App, TFile, TAbstractFile } from 'obsidian';
 import { Settings } from '../settings';
 
 export class VaultService {
@@ -37,16 +37,25 @@ export class VaultService {
 		this.app.vault.createBinary(imagePath, arrayBuffer);
 	}
 
-	createNote(imagePath: string, customName?: string, tags?: string[]): string {
+	async createNote(imagePath: string, customName?: string, tags?: string[]): Promise<string> {
 		const noteFilename: string = customName
 			? `${customName}${this.noteExtension}`
 			: `${this.notePrefix}${Date.now()}${this.noteExtension}`;
 		const notePath: string = this.getNotePath(noteFilename);
 		const relativeImagePath: string = this.getRelativeImagePath(imagePath, notePath);
-		const assetLink: string | undefined = this.settings.includeAssetProperty ? relativeImagePath : undefined;
-		const frontmatter: string = this.generateFrontmatter(tags, assetLink);
 		const imageMarkdown: string = `${this.markdownImagePrefix}${relativeImagePath}${this.markdownImageSuffix}`;
-		const noteContent: string = frontmatter ? `${frontmatter}\n${imageMarkdown}` : imageMarkdown;
+		const assetLink: string | undefined = this.settings.includeAssetProperty ? relativeImagePath : undefined;
+
+		let noteContent: string = '';
+
+		if (this.settings.templateFile) {
+			const templateContent: string = await this.readTemplateContent(this.settings.templateFile);
+			const mergedContent: string = this.mergeTemplateWithProperties(templateContent, tags, assetLink);
+			noteContent = `${mergedContent}\n${imageMarkdown}`;
+		} else {
+			const frontmatter: string = this.generateFrontmatter(tags, assetLink);
+			noteContent = frontmatter ? `${frontmatter}\n${imageMarkdown}` : imageMarkdown;
+		}
 
 		this.ensureFolderExists(this.settings.imageNotesFolder);
 
@@ -54,8 +63,8 @@ export class VaultService {
 		return noteFilename;
 	}
 
-	createNoteFromExistingFile(existingImagePath: string, customName?: string, tags?: string[]): string {
-		return this.createNote(existingImagePath, customName, tags);
+	async createNoteFromExistingFile(existingImagePath: string, customName?: string, tags?: string[]): Promise<string> {
+		return await this.createNote(existingImagePath, customName, tags);
 	}
 
 	private getImagePath(filename: string): string {
@@ -116,6 +125,101 @@ export class VaultService {
 		frontmatterContent += '---';
 
 		return frontmatterContent;
+	}
+
+	private mergeTemplateWithProperties(templateContent: string, tags?: string[], assetLink?: string): string {
+		const hasFrontmatter: boolean = templateContent.startsWith('---\n');
+
+		if (!hasFrontmatter) {
+			const frontmatter: string = this.generateFrontmatter(tags, assetLink);
+			return frontmatter ? `${frontmatter}\n${templateContent}` : templateContent;
+		}
+
+		const frontmatterEnd: number = templateContent.indexOf('\n---', 4);
+		if (frontmatterEnd === -1) {
+			const frontmatter: string = this.generateFrontmatter(tags, assetLink);
+			return frontmatter ? `${frontmatter}\n${templateContent}` : templateContent;
+		}
+
+		const existingFrontmatter: string = templateContent.substring(4, frontmatterEnd);
+		const templateBody: string = templateContent.substring(frontmatterEnd + 4);
+
+		let mergedFrontmatter: string = '---\n';
+		mergedFrontmatter += existingFrontmatter;
+
+		if (assetLink) {
+			mergedFrontmatter += `\nasset: "[[${assetLink}]]"`;
+		}
+
+		if (tags && tags.length > 0) {
+			const tagsList: string = tags.map((tag: string): string => `"${tag}"`).join(', ');
+			mergedFrontmatter += `\ntags: [${tagsList}]`;
+		}
+
+		mergedFrontmatter += '\n---';
+
+		return `${mergedFrontmatter}${templateBody}`;
+	}
+
+	private async getTemplatesFolder(): Promise<string> {
+		const defaultFolder: string = 'Templates';
+		const configPath: string = '.obsidian/templates.json';
+		
+		let configContent: string = '';
+		
+		try {
+			configContent = await this.app.vault.adapter.read(configPath);
+		} catch (error: unknown) {
+			return defaultFolder;
+		}
+		
+		let config: { folder?: string } = {};
+		
+		try {
+			config = JSON.parse(configContent);
+		} catch (error: unknown) {
+			return defaultFolder;
+		}
+		
+		const folder: string = config.folder || defaultFolder;
+		return folder;
+	}
+
+	private async getTemplateFiles(): Promise<string[]> {
+		const templatesFolder: string = await this.getTemplatesFolder();
+		const allMarkdownFiles: TFile[] = this.app.vault.getMarkdownFiles();
+		const templateFiles: TFile[] = allMarkdownFiles.filter((file: TFile): boolean => 
+			file.path.startsWith(`${templatesFolder}${this.pathSeparator}`)
+		);
+		const filenames: string[] = templateFiles.map((file: TFile): string => 
+			file.path.substring(templatesFolder.length + 1)
+		);
+		return filenames;
+	}
+
+	private async readTemplateContent(templateFile: string): Promise<string> {
+		const templatesFolder: string = await this.getTemplatesFolder();
+		const templatePath: string = `${templatesFolder}${this.pathSeparator}${templateFile}`;
+		const file: TAbstractFile | null = this.app.vault.getAbstractFileByPath(templatePath);
+		
+		if (!file) {
+			throw new Error(`Template file not found: ${templatePath}`);
+		}
+		
+		const content: string = await this.app.vault.cachedRead(file as TFile);
+		return content;
+	}
+
+	async getTemplateOptions(): Promise<Record<string, string>> {
+		const templateFiles: string[] = await this.getTemplateFiles();
+		const options: Record<string, string> = { '': 'None' };
+		
+		templateFiles.forEach((filename: string): void => {
+			const displayName: string = filename.replace(this.noteExtension, '');
+			options[filename] = displayName;
+		});
+		
+		return options;
 	}
 
 }

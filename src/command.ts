@@ -53,7 +53,7 @@ export class Command {
 		if (this.settings.showPreviewModal) {
 			await this.showPreviewAndCreateNote();
 		} else {
-			this.createNote();
+			await this.createNote();
 		}
 	}
 
@@ -67,12 +67,12 @@ export class Command {
 			return;
 		}
 
-		this.createNoteFromBufferWithNameAndTags(imageBuffer, result.name, result.tags);
+		await this.createNoteFromBufferWithNameAndTags(imageBuffer, result.name, result.tags);
 	}
 
-	private createNoteFromBuffer(imageBuffer: Buffer): void {
+	private async createNoteFromBuffer(imageBuffer: Buffer): Promise<void> {
 		const filename: string = this.saveImage(imageBuffer);
-		const noteTitle: string = this.createNoteInVault(filename);
+		const noteTitle: string = await this.createNoteInVault(filename);
 
 		if (this.isNoteBeingEdited()) {
 			this.insertNoteLinkAtCursor(noteTitle);
@@ -81,9 +81,9 @@ export class Command {
 		this.notifySuccess();
 	}
 
-	private createNoteFromBufferWithNameAndTags(imageBuffer: Buffer, customName: string, tags: string[]): void {
+	private async createNoteFromBufferWithNameAndTags(imageBuffer: Buffer, customName: string, tags: string[]): Promise<void> {
 		const filename: string = this.saveImageWithName(imageBuffer, customName);
-		const noteTitle: string = this.createNoteInVaultWithNameAndTags(filename, customName, tags);
+		const noteTitle: string = await this.createNoteInVaultWithNameAndTags(filename, customName, tags);
 
 		if (this.isNoteBeingEdited()) {
 			this.insertNoteLinkAtCursor(noteTitle);
@@ -92,9 +92,9 @@ export class Command {
 		this.notifySuccess();
 	}
 
-	private createNote(): void {
+	private async createNote(): Promise<void> {
 		const imageBuffer: Buffer = this.readImage();
-		this.createNoteFromBuffer(imageBuffer);
+		await this.createNoteFromBuffer(imageBuffer);
 	}
 
 	private hasImage(): boolean {
@@ -113,12 +113,12 @@ export class Command {
 		return this.vaultService.saveImage(imageBuffer, customName);
 	}
 
-	private createNoteInVault(filename: string): string {
-		return this.vaultService.createNote(filename);
+	private async createNoteInVault(filename: string): Promise<string> {
+		return await this.vaultService.createNote(filename);
 	}
 
-	private createNoteInVaultWithNameAndTags(filename: string, customName: string, tags: string[]): string {
-		return this.vaultService.createNote(filename, customName, tags);
+	private async createNoteInVaultWithNameAndTags(filename: string, customName: string, tags: string[]): Promise<string> {
+		return await this.vaultService.createNote(filename, customName, tags);
 	}
 
 	private notifySuccess(): void {

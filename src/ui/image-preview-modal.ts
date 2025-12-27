@@ -44,7 +44,7 @@ export class ImagePreviewModal extends Modal {
 		const suggestionsElement = this.tagInput.getSuggestions();
 
 		const hint: HTMLParagraphElement = contentEl.createEl('p', {
-			text: 'Press Enter in name field to create note',
+			text: 'Press Enter to create note, or Ctrl+Enter from tag field',
 		});
 		hint.style.textAlign = 'center';
 		hint.style.color = 'var(--text-muted)';
@@ -76,6 +76,14 @@ export class ImagePreviewModal extends Modal {
 		this.scope.register([], 'ArrowUp', () => {
 			if (document.activeElement === tagInputElement) {
 				suggestionsElement.navigateUp();
+				return false;
+			}
+			return true;
+		});
+
+		this.scope.register(['Mod'], 'Enter', () => {
+			if (document.activeElement === tagInputElement) {
+				this.submit();
 				return false;
 			}
 			return true;
